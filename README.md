@@ -1,6 +1,6 @@
 This is Group 14 of BIS 15L, Winter 2026.
 
-Members: Arden Moser, Gerog Bucher, and Stanley Chan
+Members: Arden Moser, Georg Bucher, and Stanley Chan
 
 Links to our data set:
 
