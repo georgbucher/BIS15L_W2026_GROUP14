@@ -8,24 +8,59 @@ library(tidyverse)
 library(janitor)
 library(ggplot2)
 ```
-#upload data
+
 ```{r}
-egg_laying <- read_csv("egg_laying_data.csv")
-plant_chemistry <- read.csv("plant_chemistry_data.csv")
+egg_laying <- read_csv("egg_laying_data.csv") %>% 
+  clean_names()
+plant_chemistry <- read.csv("plant_chemistry_data.csv") %>%
+  clean_names()
 ```
 
 ```{r}
 plant_joined <- left_join(egg_laying, plant_chemistry, by="plant_id")
 ```
 
-# Create a scatterplot with temperature soil and n_molar, coloring based on temperature.
 ```{r}
 plant_joined %>% 
-  select(temperature_ambient, n_molar) %>% 
+  select(temperature_ambient, n_molar, season.x) %>% 
   na.omit() %>% 
-  ggplot(aes(x=temperature_soil, y=n_molar))+
-  geom_point(mapping=aes(color=species))+
-  geom_smooth(method="lm", se=T)
+  ggplot(aes(x=season.x, y=n_molar))+
+  geom_boxplot(mapping=aes(fill=season.x))
 ```
 
+```{r}
+ plant_joined %>% 
+  ggplot(aes(x=temperature_ambient, color=season.x, fill=season.x))+
+  geom_density()
+```
+
+```{r}
+ plant_joined %>% 
+  ggplot(aes(x=temperature_soil, color=season.x, fill=season.x))+
+  geom_density()
+```
+
+```{r}
+plant_joined %>% 
+  select(predicted_n, n_molar) %>% 
+  ggplot(aes(predicted_n, n_molar))+
+  geom_point()
+```
+
+```{r}
+plant_joined %>% 
+  select(occupied, temperature_ambient, season.x) %>% 
+  mutate(occupied=factor(occupied)) %>% 
+  ggplot(aes(x=occupied))+
+  geom_bar(mapping=aes(fill=season.x), color="black", position="dodge")
+```
+
+```{r}
+plant_joined %>% 
+  select(occupied, predicted_n, season.x) %>% 
+  mutate(occupied=factor(occupied)) %>% 
+  ggplot(aes(x=predicted_n))+
+  geom_density(mapping=aes(fill=occupied), position="dodge", alpha=0.5)+
+  facet_wrap(~season.x, ncol=2, labeller=label_both)
+```
 
