@@ -1,0 +1,31 @@
+---
+title: "work_stanley"
+output: html_document
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+```
+#upload data
+```{r}
+egg_laying <- read_csv("egg_laying_data.csv")
+plant_chemistry <- read.csv("plant_chemistry_data.csv")
+```
+
+```{r}
+plant_joined <- left_join(egg_laying, plant_chemistry, by="plant_id")
+```
+
+# Create a scatterplot with temperature soil and n_molar, coloring based on temperature.
+```{r}
+plant_joined %>% 
+  select(temperature_ambient, n_molar) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=temperature_soil, y=n_molar))+
+  geom_point(mapping=aes(color=species))+
+  geom_smooth(method="lm", se=T)
+```
+
+
