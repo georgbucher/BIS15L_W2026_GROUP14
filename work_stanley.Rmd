@@ -117,14 +117,15 @@ coordtomap %>%
   summary()
 ```
 ```{r}
-register_stadiamaps("f9de653c-55a3-4f5b-9672-63291557e012", write = FALSE)
+
 ```
 
 ```{r}
-lat <- c(51.71, 51.75)
-long <- c(-1.185, -1.181)
+lat <- c(46.71, 55.75)
+long <- c(-6.185, -4.181)
 bbox <- make_bbox(long, lat, f=0.03)
-map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=5)
-ggmap(map1)
+map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=8)
+ggmap(map1)+
+  geom_point(data=coordtomap, aes(longitude, latitude), size=0.75, color="black", alpha=0.8)
 ```
 
