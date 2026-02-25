@@ -100,12 +100,31 @@ ConvertGridRef(c(456531, 205539))
 ```
 
 ```{r}
-egg_laying %>% 
+coordtomap <- egg_laying %>% 
   select(gps) %>% 
   na.omit() %>% 
   separate(gps, into=c("SP", "grid"), sep=2) %>% 
   separate(grid, into=c("easting", "northing"), sep=5) %>% 
   mutate(easting=as.numeric(easting)+400000) %>% 
-  mutate(northing=as.numeric(northing)+200000) #%>% mutate(c(latitude, longitude)=ConvertGridRef(c(easting, northing))) 
+  mutate(northing=as.numeric(northing)+200000) %>% 
+  rowwise() %>% 
+  mutate(coords=list(ConvertGridRef(c(easting,northing)))) %>% 
+  unnest(coords)
+```
+
+```{r}
+coordtomap %>% 
+  summary()
+```
+```{r}
+register_stadiamaps("f9de653c-55a3-4f5b-9672-63291557e012", write = FALSE)
+```
+
+```{r}
+lat <- c(51.71, 51.75)
+long <- c(-1.185, -1.181)
+bbox <- make_bbox(long, lat, f=0.03)
+map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=5)
+ggmap(map1)
 ```
 
