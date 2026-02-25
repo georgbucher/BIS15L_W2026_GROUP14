@@ -9,6 +9,7 @@ library(janitor)
 library(ggplot2)
 library(ggmap)
 library(leaflet)
+library(UKFE)
 ```
 
 ```{r}
@@ -92,5 +93,19 @@ plant_joined %>%
   mutate(occupied=factor(occupied)) %>% 
   ggplot(mapping=aes(x=bare))+
   geom_bar(mapping=aes(fill=occupied), position="dodge")
+```
+
+```{r}
+ConvertGridRef(c(456531, 205539))
+```
+
+```{r}
+egg_laying %>% 
+  select(gps) %>% 
+  na.omit() %>% 
+  separate(gps, into=c("SP", "grid"), sep=2) %>% 
+  separate(grid, into=c("easting", "northing"), sep=5) %>% 
+  mutate(easting=as.numeric(easting)+400000) %>% 
+  mutate(northing=as.numeric(northing)+200000) #%>% mutate(c(latitude, longitude)=ConvertGridRef(c(easting, northing))) 
 ```
 
