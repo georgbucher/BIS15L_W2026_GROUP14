@@ -7,6 +7,9 @@ output: html_document
 library(tidyverse)
 library(janitor)
 library(ggplot2)
+library(ggmap)
+library(leaflet)
+library(UKFE)
 ```
 
 ```{r}
@@ -22,9 +25,9 @@ plant_joined <- left_join(egg_laying, plant_chemistry, by="plant_id")
 
 ```{r}
 plant_joined %>% 
-  select(temperature_ambient, n_molar, season.x) %>% 
+  select(temperature_ambient, predicted_n, season.x) %>% 
   na.omit() %>% 
-  ggplot(aes(x=season.x, y=n_molar))+
+  ggplot(aes(x=season.x, y=predicted_n))+
   geom_boxplot(mapping=aes(fill=season.x))
 ```
 
@@ -62,5 +65,67 @@ plant_joined %>%
   ggplot(aes(x=predicted_n))+
   geom_density(mapping=aes(fill=occupied), position="dodge", alpha=0.5)+
   facet_wrap(~season.x, ncol=2, labeller=label_both)
+```
+
+# Do butterflies prefer plants with higher percentage of bare land?
+
+```{r}
+egg_laying %>% 
+  filter(season=="autumn") %>% 
+  na.omit() %>% 
+  ggplot(mapping=aes(x=bare_ground, y=temperature_soil))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)
+```
+
+```{r}
+egg_laying %>% 
+  filter(season=="spring") %>% 
+  na.omit() %>% 
+  ggplot(mapping=aes(x=bare_ground, y=predicted_n))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)
+```
+
+```{r}
+plant_joined %>% 
+  na.omit() %>% 
+  mutate(occupied=factor(occupied)) %>% 
+  ggplot(mapping=aes(x=bare))+
+  geom_bar(mapping=aes(fill=occupied), position="dodge")
+```
+
+```{r}
+ConvertGridRef(c(456531, 205539))
+```
+
+```{r}
+coordtomap <- egg_laying %>% 
+  select(gps) %>% 
+  na.omit() %>% 
+  separate(gps, into=c("SP", "grid"), sep=2) %>% 
+  separate(grid, into=c("easting", "northing"), sep=5) %>% 
+  mutate(easting=as.numeric(easting)+400000) %>% 
+  mutate(northing=as.numeric(northing)+200000) %>% 
+  rowwise() %>% 
+  mutate(coords=list(ConvertGridRef(c(easting,northing)))) %>% 
+  unnest(coords)
+```
+
+```{r}
+coordtomap %>% 
+  summary()
+```
+```{r}
+
+```
+
+```{r}
+lat <- c(46.71, 55.75)
+long <- c(-6.185, -4.181)
+bbox <- make_bbox(long, lat, f=0.03)
+map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=8)
+ggmap(map1)+
+  geom_point(data=coordtomap, aes(longitude, latitude), size=0.75, color="black", alpha=0.8)
 ```
 
