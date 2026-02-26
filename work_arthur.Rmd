@@ -68,6 +68,51 @@ server <- function(input, output, session) {
 
 shinyApp(ui, server)
 ```
+```{r}
+set.seed(123)
+plant_joined <- data.frame(
+  occupied = sample(c(0, 1), 200, replace = TRUE),
+  temperature_ambient = rnorm(200, mean = 20, sd = 5),
+  season.x = sample(c("autumn", "spring"), 200, replace = TRUE)
+)
+
+ui <- page_sidebar(
+  title = "Plant Occupancy by Season",
+  sidebar = sidebar(
+    radioButtons(
+      "season",
+      "Select Season:",
+      choices = c("Autumn" = "autumn", "Spring" = "spring"),
+      selected = "autumn"
+    )
+  ),
+  card(
+    card_header("Occupancy Distribution"),
+    plotOutput("occupancy_plot")
+  )
+)
+
+server <- function(input, output, session) {
+  output$occupancy_plot <- renderPlot({
+    plant_joined %>% 
+      filter(season.x == input$season) %>%
+      mutate(occupied = factor(occupied)) %>% 
+      ggplot(aes(x = occupied)) +
+      geom_bar(aes(fill = season.x), color = "black", position = "dodge") +
+      scale_fill_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#90EE90")
+      ) +
+      labs(
+        x = "Occupied",
+        y = "Count",
+        fill = "Season"
+      ) +
+      theme_minimal() +
+      theme(text = element_text(size = 14))
+  })
+}
+
+shinyApp(ui, server)
 
 ## Including Plots
 
@@ -76,5 +121,78 @@ You can also embed plots, for example:
 ```{r pressure, echo=FALSE}
 plot(pressure)
 ```
+```{r}
+set.seed(123)
+plant_joined <- data.frame(
+  occupied = sample(c(0, 1), 200, replace = TRUE),
+  temperature_ambient = rnorm(200, mean = 20, sd = 5),
+  temperature_soil = rnorm(200, mean = 18, sd = 4),
+  season.x = sample(c("autumn", "spring"), 200, replace = TRUE)
+)
 
+ui <- page_sidebar(
+  title = "Plant Data by Season",
+  sidebar = sidebar(
+    radioButtons(
+      "season",
+      "Select Season:",
+      choices = c("Autumn" = "autumn", "Spring" = "spring"),
+      selected = "autumn"
+    )
+  ),
+  layout_columns(
+    card(
+      card_header("Occupancy Distribution"),
+      plotOutput("occupancy_plot")
+    ),
+    card(
+      card_header("Soil Temperature Density"),
+      plotOutput("temp_soil_plot")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  output$occupancy_plot <- renderPlot({
+    plant_joined %>% 
+      filter(season.x == input$season) %>%
+      mutate(occupied = factor(occupied)) %>% 
+      ggplot(aes(x = occupied)) +
+      geom_bar(aes(fill = season.x), color = "black", position = "dodge") +
+      scale_fill_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#90EE90")
+      ) +
+      labs(
+        x = "Occupied",
+        y = "Count",
+        fill = "Season"
+      ) +
+      theme_minimal() +
+      theme(text = element_text(size = 14))
+  })
+  
+  output$temp_soil_plot <- renderPlot({
+    plant_joined %>% 
+      filter(season.x == input$season) %>%
+      ggplot(aes(x = temperature_soil, color = season.x, fill = season.x)) +
+      geom_density(alpha = 0.5) +
+      scale_color_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#90EE90")
+      ) +
+      scale_fill_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#90EE90")
+      ) +
+      labs(
+        x = "Soil Temperature",
+        y = "Density",
+        color = "Season",
+        fill = "Season"
+      ) +
+      theme_minimal() +
+      theme(text = element_text(size = 14))
+  })
+}
+
+shinyApp(ui, server)
+```
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
