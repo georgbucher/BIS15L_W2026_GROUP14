@@ -13,9 +13,9 @@ library(UKFE)
 ```
 
 ```{r}
-egg_laying <- read_csv("egg_laying_data.csv") %>% 
+egg_laying <- read_csv("data/egg_laying_data.csv") %>% 
   clean_names()
-plant_chemistry <- read.csv("plant_chemistry_data.csv") %>%
+plant_chemistry <- read.csv("data/plant_chemistry_data.csv") %>%
   clean_names()
 ```
 
@@ -121,10 +121,10 @@ coordtomap %>%
 ```
 
 ```{r}
-lat <- c(46.71, 55.75)
-long <- c(-6.185, -4.181)
-bbox <- make_bbox(long, lat, f=0.03)
-map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=8)
+lat <- c(51.74 , 51.75 )
+long <- c(-1.185 , -1.184)
+bbox <- make_bbox(long, lat, f=100)
+map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=10)
 ggmap(map1)+
   geom_point(data=coordtomap, aes(longitude, latitude), size=0.75, color="black", alpha=0.8)
 ```
