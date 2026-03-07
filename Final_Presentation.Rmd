@@ -1,11 +1,12 @@
 ---
 title: "Final Presentation"
-output: html_document
+output: ioslides_presentation
 date: "2026-02-25"
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = FALSE)
+library("jpeg")
 ```
 
 ## R Markdown
@@ -27,3 +28,10 @@ plot(pressure)
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+## Sample Image
+
+<div class="centered">
+
+![](images-3.jpeg)
+
