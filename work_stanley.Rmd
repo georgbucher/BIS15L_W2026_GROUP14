@@ -145,3 +145,9 @@ ggmap(map1)+
   geom_point(data=coordtomap, aes(longitude, latitude), size=0.75, color="black", alpha=0.8)
 ```
 
+```{r}
+egg_laying %>% 
+  mutate(larvae_egg_ratio=)
+```
+
+
