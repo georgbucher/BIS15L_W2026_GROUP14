@@ -83,7 +83,7 @@ In addition to the packages we've included from lecture, we also added the packa
 ```{r}
 register_stadiamaps("f9de653c-55a3-4f5b-9672-63291557e012", write = FALSE)
 coordtomap <- egg_laying %>% 
-  select(gps) %>% 
+  select(gps, season) %>% 
   na.omit() %>% 
   separate(gps, into=c("SP", "grid"), sep=2) %>% #separate numerical part from SP 
   separate(grid, into=c("easting", "northing"), sep=5) %>% # divide
@@ -102,9 +102,9 @@ summary(coordtomap) # find the minimum and maximum latitude and longitude
 lat <- c(51.74 , 51.75) # use 
 long <- c(-1.185 , -1.181)
 bbox <- make_bbox(long, lat, f=0.03) # create
-map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=4)
+map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=12)
 ggmap(map1)+
-  geom_point(data=coordtomap, aes(longitude, latitude), size=0.75, color="black", alpha=0.8)
+  geom_point(data=coordtomap, aes(longitude, latitude, color=season), size=0.75, alpha=0.8)
 ```
 
 ## Factors that may influence nutritional quality
