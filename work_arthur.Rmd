@@ -25,6 +25,7 @@ library(ggplot2)
 library(dplyr)
 ```
 
+**Plot of recorded seasonal
 ```{r}
 egg_laying %>% 
   filter(season %in% c("spring", "autumn")) %>% 
@@ -34,21 +35,10 @@ egg_laying %>%
          is.finite(larvae_success_rate)) %>% 
   ggplot(aes(x = total_leaf_area, y = larvae_success_rate, color = season)) +
   geom_point(size = 3, alpha = 0.8) +
-  geom_smooth(method = "lm", se = TRUE, linewidth = 1.2) +
+  geom_smooth(method="lm", se=T)+
   scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
-  scale_color_manual(values = c("spring" = "#1b9e77", "autumn" = "#d95f02")) +
-  labs(
-    x = "Total leaf area",
-    y = "Larvae success rate",
-    color = "Season"
-  ) +
-  theme_classic(base_size = 14) +
-  theme(
-    legend.position = "right",
-    legend.title = element_text(face = "bold"),
-    axis.title = element_text(face = "bold"),
-    plot.title = element_text(face = "bold", hjust = 0.5)
-  )
+  labs(x = "Total leaf area",y = "Larvae success rate") +
+  theme_classic(base_size = 14) 
 ```
 
 ```{r}
