@@ -114,7 +114,7 @@ ggmap(map1)+
 
 ## Factors That May Influence Plant Nutritional Quality
 
-Plant nutritional quality is dependent on the chemical composition of each plant, with butterflies usually benefiting from high nitrogen-containing plants so that they don't need to overeat to obtain sufficient nutrients. Plant nitrogen is also representative of its soil nitrogen and improves plant growth in the vicinity. Therefore, having high nitrogen would lead to taller plants which then would lead to a lower soil temperature because less sun is able to reach there.
+Plant nutritional quality is dependent on the chemical composition of each plant, with butterflies usually benefiting from high nitrogen-containing plants so that they don't need to overeat to obtain sufficient nutrients. Plant nitrogen is also representative of its soil nitrogen and improves plant growth in the vicinity. Therefore, having high nitrogen would lead to taller plants which then would lead to a lower soil temperature because less sun is able to reach the bottom of plants.
 
 We can check to see if each of these correlations are true. We should expect to see a positive association between predicted plant nitrogen and percent of vegetation around a plant, a positive association between predicted plant nitrogen and sward height, which is the height that approximately 80% of plants grew at, and a negative association between predicted plant nitrogen and soil temperature.
 
@@ -153,6 +153,8 @@ plant_joined %>%
 ```
 
 **Discussion About Plant Nitrogen Plots**
+
+From the plots, we see that the correlation of plant nitrogen and vegetation % or sward height is actually negative. The different seasons in each plot occupy a different area, with plants in spring usually having a larger vegetation area, taller plant height, and greater soil temperature at a significantly lower plant nitrogen than plants in autumn.
 
 ## Factors That May Influence Butterfly Preference for Laying Eggs
 
@@ -235,4 +237,6 @@ plant_joined %>%
   #mutate(larvae_egg_ratio=)
 ```
 
-
+## Disclaimer About Data and Correlations
+The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant.
+Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.
