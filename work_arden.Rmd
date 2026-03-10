@@ -11,9 +11,9 @@ library(ggplot2)
 ```
 
 ```{r}
-egg_laying <- read_csv("egg_laying_data.csv") %>% 
+egg_laying <- read_csv("data/egg_laying_data.csv") %>% 
   clean_names()
-plant_chemistry <- read.csv("plant_chemistry_data.csv") %>%
+plant_chemistry <- read.csv("data/plant_chemistry_data.csv") %>%
   clean_names()
 ```
 
