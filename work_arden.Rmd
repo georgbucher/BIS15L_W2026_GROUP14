@@ -1,0 +1,35 @@
+---
+title: "work_arden"
+output: html_document
+date: "2026-02-25"
+---
+
+```{r}
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+```
+
+```{r}
+egg_laying <- read_csv("egg_laying_data.csv") %>% 
+  clean_names()
+plant_chemistry <- read.csv("plant_chemistry_data.csv") %>%
+  clean_names()
+```
+
+```{r}
+plant_joined <- left_join(egg_laying, plant_chemistry, by="plant_id")
+plant_joined
+```
+
+```{r}
+egg_laying %>% 
+  ggplot(aes(x = log10(average_leaf_size))) +
+  geom_histogram(aes(y = after_stat(density)), color = "darkgreen", fill = "green", alpha = 0.4) +
+  geom_density(color = "darkgreen") +
+  labs(
+    title = "Distribution of Leaf Sizes",
+    x = "Average Leaf Size (log10 mm^2)",
+    y = "Density"
+  )
+```
