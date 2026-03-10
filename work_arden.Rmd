@@ -16,7 +16,7 @@ egg_laying <- read_csv("data/egg_laying_data.csv") %>%
   clean_names()
 ```
 
-# Ambient Temperature
+# Ambient Temperature (SCRAPPED DUE TO INCOMPLETE TEMPERATURE RANGE)
 ```{r}
 egg_laying %>%
   select(temperature_ambient, n_eggs) %>% 
@@ -34,7 +34,7 @@ egg_laying %>%
     )
 egg_laying %>%
   filter(n_eggs != 0) %>%
-  ggplot(aes(x = temperature_ambient, y = n_eggs)) +
+  ggplot(aes(x = temperature_ambient, y = n_eggs, color = season)) +
   geom_jitter(alpha = 0.4) +
   geom_smooth(method = "lm", se = FALSE, color = "red") +
   theme_minimal() +
@@ -102,9 +102,9 @@ egg_laying %>%
   )
 egg_laying %>%
   filter(n_eggs != 0) %>%
-  ggplot(aes(x = predicted_n, y = n_eggs)) +
-  geom_jitter(alpha = 0.4) +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  ggplot(aes(x = predicted_n, y = n_eggs, color = season)) +
+  geom_jitter(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
   theme_minimal() +
   labs(
     title = "Amount of Butterfly Eggs Layed based on Nitrogen Content of Plants",
@@ -140,9 +140,9 @@ egg_laying %>%
   )
 egg_laying %>%
   filter(n_eggs != 0) %>%
-  ggplot(aes(x = average_leaf_size, y = n_eggs)) +
-  geom_jitter(alpha = 0.4) +
-  geom_smooth(method = "lm", se = FALSE, color = "red") +
+  ggplot(aes(x = average_leaf_size, y = n_eggs, color = season)) +
+  geom_jitter(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
   theme_minimal() +
   labs(
     title = "Amount of Butterfly Eggs Layed based on Average Leaf Size",
