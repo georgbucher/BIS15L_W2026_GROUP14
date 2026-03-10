@@ -3,62 +3,227 @@ title: "work_stanley"
 output: html_document
 ---
 
+## Libraries
 ```{r message=FALSE, warning=FALSE}
 library(tidyverse)
 library(janitor)
 library(ggplot2)
+library(naniar)
 library(ggmap)
-library(leaflet)
 library(UKFE)
 ```
 
-## Introduction
-
+## Introduction and Motivation
+In this project, we will study the factors that may predict plant nutritional quality and butterfly preference for laying eggs. Butterflies contribute greatly to the wide diversity of flower species by cross-pollination when it feeds on nectar. By learning what factors butterflies have a greater tendency to lay its eggs at, we could possibly predict butterfly behavior based on certain environmental conditions as well as advocate for butterfly habitat protection at crucial areas.
 
 ## Data
-In this project, we will study the factors that may affect plant nutritional quality and butterfly preference for laying eggs. We will use data from [William B.V. Langdon, Richard Fox, Owen T. Lewis, Host plant use is driven by microclimate not nutritional quality in a grassland butterfly](https://doi.org/10.1101/2025.11.15.688506). The original research article and data sets are included in the data folder in this repository.
+We will use data from [William B.V. Langdon, Richard Fox, Owen T. Lewis, Host plant use is driven by microclimate not nutritional quality in a grassland butterfly](https://doi.org/10.1101/2025.11.15.688506). The original research article and data sets are included in the data folder in this repository.
 ```{r}
 egg_laying <- read_csv("data/egg_laying_data.csv") %>% 
   clean_names()
-plant_chemistry <- read.csv("data/plant_chemistry_data.csv") %>%
+plant_chemistry <- read_csv("data/plant_chemistry_data.csv") %>%
   clean_names()
 ```
 
-
-## Exploratory Data Analysis:
+## Exploratory Data Analysis
+**Looking Into Egg Laying Data Set**
 
 ```{r}
-glimpse(egg_laying)
+names(egg_laying)
 ```
 
 ```{r}
-plant_joined <- left_join(egg_laying, plant_chemistry, by="plant_id")
+summary(egg_laying) # look at overall distribution of data, check for abnormal values
 ```
 
-## Factors that may influence environmental temperature
+Looking into the summary as well as the data set itself, NA's don't seem to be represented as any other integers or numerical-type NA's.
 
-Butterfly offspring suitability can be determined primarily by two factors: environmental temperature and plant nutritional quality. 
+```{r}
+egg_laying %>% 
+  miss_var_summary() #check for NA's
+```
 
+```{r}
+egg_laying %>% 
+  gg_miss_var()+ #visualizing the NA's
+  labs(title="NA's in Egg Laying Data Set")
+```
+
+Through the NA summary and plot, we can see the majority of NA's come from environment_date with most of the other NA's from leaf2 and leaf3 measurements. It's possible that they left the environmental measurement dates out on accident as variables besides ambient and soil temperature were measured despite the date being NA. For the leaf measurements, it could be that researchers thought that 1 or 2 leaf measurements of a plant seemed representative of the rest of the plant's leaves.
+
+**Looking Into Plant Chemistry Data Set**
+
+```{r}
+names(plant_chemistry)
+```
+
+```{r}
+summary(plant_chemistry)
+```
+
+```{r}
+plant_chemistry %>% 
+  miss_var_summary() #check for NA's
+```
+
+The data set, plant_chemistry, is clean and tidy without any NA's or suspicious values.
+
+**Joining the Data Sets**
+
+Since the egg_laying and plant_chemistry data sets have the same plant id, we can join the two data sets together using a join function. It's important to know that plant_chemistry also shares the same leaf length, width, area, plant area, and season, so we can select the unique variables of plant_chemistry.
+
+```{r}
+plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c, cn_percent, n_molar, c_molar, cn_molar, quality_pc1, quality_pc2), by="plant_id")
+```
+
+**Distribution of Important Variables**
+
+We can compare the number of observations of each season and consider whether data was collected evenly in each.
+```{r}
+plant_joined %>% 
+  select(season) %>% 
+  count(season, sort=T) #obtain counts of season numerically
+```
+
+```{r}
+plant_joined %>% 
+  select(season) %>% 
+  ggplot(aes(x=season))+ # visually compare the counts of season in this data set
+  geom_bar(aes(fill=season))+
+  labs(title="Number of Observations in Each Season", x="Season", y=NULL, fill="Season")
+```
+
+There are more observations done during the spring season than autumn (a difference of 50 and a spring:autumn ratio of 1.37:1), but it's likely not significant enough to skew the data.
+
+**
+
+**Creating Map for Data Set**
+
+In addition to the packages we've included from lecture, we also added the package `UKFE` to convert the British national grid reference coordinates into latitude and longitude. The SP that each plant has in their gps refers to a 100x100km^2 map. Converting  which is conveniently handled by the ConverGridRef function of UKFE. 
+
+```{r}
+register_stadiamaps("f9de653c-55a3-4f5b-9672-63291557e012", write = FALSE)
+coordtomap <- egg_laying %>% 
+  select(gps, season) %>% 
+  na.omit() %>% 
+  separate(gps, into=c("SP", "grid"), sep=2) %>% #separate numerical part from SP 
+  separate(grid, into=c("easting", "northing"), sep=5) %>% # divide number into easting and northing portions
+  mutate(easting=as.numeric(easting)+400000) %>% 
+  mutate(northing=as.numeric(northing)+200000) %>% 
+  rowwise() %>% 
+  mutate(coords=list(ConvertGridRef(c(easting,northing)))) %>% 
+  unnest(coords)
+```
+
+```{r}
+summary(coordtomap) # find the minimum and maximum latitude and longitude
+```
+
+```{r}
+lat <- c(51.74 , 51.75) # 
+long <- c(-1.185 , -1.181)
+bbox <- make_bbox(long, lat, f=0.25) # create
+map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=15)
+ggmap(map1)+
+  geom_point(data=coordtomap, aes(longitude, latitude, color=season), size=0.75, alpha=0.8)+
+  theme(axis.text.x=element_text(angle=60, hjust=1))+
+  labs(title="Distribution of Plants Around Shotover Country Park (United Kingdom)", x="Longitude", y="Latitude", color="Season")
+```
+
+## Factors Associated with Plant Nutritional Quality
+
+Plant nutritional quality is dependent on the chemical composition of each plant, with butterflies usually benefiting from high nitrogen-containing plants so that they don't need to overeat to obtain sufficient nutrients. Plant nitrogen is also representative of its soil nitrogen and improves plant growth in the vicinity. Therefore, having high nitrogen would lead to taller plants which then would lead to a lower soil temperature because less sun is able to reach the bottom of plants.
+
+We can check to see if each of these correlations are true. We should expect to see a positive association between plant nitrogen and percent of vegetation around a plant, a positive association between plant nitrogen and sward height, which is the height that approximately 80% of plants grew at, and a negative association between predicted plant nitrogen and soil temperature.
+
+**Plot of Predicted Plant Nitrogen vs. %Vegetation**
+```{r}
+plant_joined %>% 
+  select(predicted_n, veg, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=predicted_n, y=veg))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  labs(title="Predicted Plant Nitrogen vs. %Vegetation", x="Predicted Plant Nitrogen (micromole/gram)", y="%Vegetation", color="Season")
+```
+
+
+**Plot of Predicted Plant Nitrogen vs. Sward Height**
+```{r}
+plant_joined %>%
+  select(predicted_n, sward_height, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=predicted_n, y=sward_height))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  labs(title="Predicted Plant Nitrogen vs. Sward Height", x="Predicted Plant Nitrogen (micromole/gram)", y="Sward Height (cm)", color="Season")
+```
+
+**Plot of Predicted Plant Nitrogen vs. Soil Temperature**
+```{r}
+plant_joined %>% 
+  select(predicted_n, temperature_soil, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=predicted_n, y=temperature_soil))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  labs(title="Predicted Plant Nitrogen vs. Soil Temperature", x="Predicted Plant Nitrogen (micromol/g)", y="Soil Temperature (°C)", color="Season")
+```
+
+**Discussion About Vegetation-Related Plant Nitrogen Plots**
+
+From the plots, we see that the correlation of plant nitrogen and vegetation % or sward height is actually negative. 
+The only correlation that matches our prediction is the negative correlation of plant nitrogen and soil temperature. The different seasons in each plot occupy a different area, with plants in spring usually having a larger vegetation area, taller plant height, and greater soil temperature at a significantly lower plant nitrogen than plants in autumn.
+
+**Leaf and Plant Size as a Possible Indicator of Plant Nitrogen**
+
+One of the important uses of nitrogen for plants is the creation of chlorophyll, a green pigment required for photosynthesis. Having a larger leaf area could mean a higher total amount of chlorophyll and a higher nitrogen content in a plant. A larger plant would also have a larger biomass
+We can test whether leaf and plant size are positive associated with plant nitrogen content.
+
+```{r}
+plant_joined %>% 
+  select(predicted_n, total_leaf_area, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=predicted_n, y=total_leaf_area))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  labs(title="Predicted Plant Nitrogen vs. Average Leaf Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Average Leaf Area (mm^2)", color="Season")
+```
+
+```{r}
+plant_joined %>% 
+  select(predicted_n, plant_area, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=predicted_n, y=plant_area))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  labs(title="Predicted Plant Nitrogen vs. Plant Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Plant Area (cm^2)", color="Season")
+```
+
+
+**Discussion About Leaf 
+
+## Factors That May Influence Butterfly Preference for Laying Eggs
 
 
 
 ```{r}
 plant_joined %>% 
-  select(temperature_ambient, predicted_n, season.x) %>% 
+  select(temperature_ambient, predicted_n, season) %>% 
   na.omit() %>% 
-  ggplot(aes(x=season.x, y=predicted_n))+
-  geom_boxplot(mapping=aes(fill=season.x))
+  ggplot(aes(x=season, y=predicted_n))+
+  geom_boxplot(mapping=aes(fill=season))
 ```
 
 ```{r}
  plant_joined %>% 
-  ggplot(aes(x=temperature_ambient, color=season.x, fill=season.x))+
+  ggplot(aes(x=temperature_ambient, color=season, fill=season))+
   geom_density()
 ```
 
 ```{r}
  plant_joined %>% 
-  ggplot(aes(x=temperature_soil, color=season.x, fill=season.x))+
+  ggplot(aes(x=temperature_soil, color=season, fill=season))+
   geom_density()
 ```
 
@@ -71,22 +236,22 @@ plant_joined %>%
 
 ```{r}
 plant_joined %>% 
-  select(occupied, temperature_ambient, season.x) %>% 
+  select(occupied, temperature_ambient, season) %>% 
   mutate(occupied=factor(occupied)) %>% 
   ggplot(aes(x=occupied))+
-  geom_bar(mapping=aes(fill=season.x), color="black", position="dodge")
+  geom_bar(mapping=aes(fill=season), color="black", position="dodge")
 ```
 
 ```{r}
 plant_joined %>% 
-  select(occupied, predicted_n, season.x) %>% 
+  select(occupied, predicted_n, season) %>% 
   mutate(occupied=factor(occupied)) %>% 
   ggplot(aes(x=predicted_n))+
   geom_density(mapping=aes(fill=occupied), position="dodge", alpha=0.5)+
-  facet_wrap(~season.x, ncol=2, labeller=label_both)
+  facet_wrap(~season, ncol=2, labeller=label_both)
 ```
 
-# Do butterflies prefer plants with higher percentage of bare land?
+# Do butterflies prefer plants with higher percentage of bare land
 
 ```{r}
 egg_laying %>% 
@@ -115,39 +280,9 @@ plant_joined %>%
 ```
 
 ```{r}
-ConvertGridRef(c(456531, 205539))
+#egg_laying %>% 
+  #mutate(larvae_egg_ratio=)
 ```
 
-```{r}
-coordtomap <- egg_laying %>% 
-  select(gps) %>% 
-  na.omit() %>% 
-  separate(gps, into=c("SP", "grid"), sep=2) %>% 
-  separate(grid, into=c("easting", "northing"), sep=5) %>% 
-  mutate(easting=as.numeric(easting)+400000) %>% 
-  mutate(northing=as.numeric(northing)+200000) %>% 
-  rowwise() %>% 
-  mutate(coords=list(ConvertGridRef(c(easting,northing)))) %>% 
-  unnest(coords)
-```
-
-```{r}
-coordtomap %>% 
-  summary()
-```
-
-```{r}
-lat <- c(51.74 , 51.75)
-long <- c(-1.185 , -1.181)
-bbox <- make_bbox(long, lat, f=1000)
-map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=4)
-ggmap(map1)+
-  geom_point(data=coordtomap, aes(longitude, latitude), size=0.75, color="black", alpha=0.8)
-```
-
-```{r}
-egg_laying %>% 
-  mutate(larvae_egg_ratio=)
-```
-
-
+## Disclaimer About Data and Correlations
+The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant. This may impact the validity of our study because the data sample isn't representative of plants and butterflies throughout the world. Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.

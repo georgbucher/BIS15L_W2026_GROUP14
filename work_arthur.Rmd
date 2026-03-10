@@ -25,6 +25,74 @@ library(ggplot2)
 library(dplyr)
 ```
 
+**Plot of recorded seasonal
+```{r}
+egg_laying %>% 
+  filter(season %in% c("spring", "autumn")) %>% 
+  mutate(larvae_success_rate = larvae / n_eggs) %>% 
+  filter(!is.na(total_leaf_area),
+         !is.na(larvae_success_rate),
+         is.finite(larvae_success_rate)) %>% 
+  ggplot(aes(x = total_leaf_area, y = larvae_success_rate, color = season)) +
+  geom_point(size = 3, alpha = 0.8) +
+  geom_smooth(method="lm", se=T)+
+  scale_y_continuous(limits = c(0, 1), expand = c(0, 0)) +
+  labs(x = "Total leaf area",y = "Larvae success rate") +
+  theme_classic(base_size = 14) 
+```
+
+```{r}
+egg_laying %>% 
+  filter(season %in% c("spring", "autumn")) %>% 
+  mutate(larvae_success_rate = larvae / n_eggs) %>% 
+  na.omit() %>% 
+  ggplot(mapping=aes(x=total_leaf_area, y=larvae_success_rate))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(mapping=aes(color=season), method="lm", se=T)+
+  labs(
+    x = "Total leaf area",
+    y = "Larvae success rate",
+    title = "Larvae Success Rate vs. Total Leaf Area"
+  )+
+  theme_classic()
+```
+
+
+```{r}
+egg_laying %>% 
+  filter(season %in% c("spring", "autumn")) %>% 
+  mutate(larvae_success_rate = larvae / n_eggs) %>% 
+  na.omit() %>% 
+  ggplot(mapping=aes(x=bare_ground, y=larvae_success_rate))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(mapping=aes(color=season), method="lm", se=T)+
+  labs(
+    x = "Bare ground (%)",
+    y = "Larvae success rate",
+    title = "Larvae Success Rate vs. Bare Ground"
+  )+
+  theme_classic()
+```
+
+```{r}
+egg_laying %>% 
+  filter(season=="spring") %>% 
+  mutate(larvae_success_rate = larvae / n_eggs) %>% 
+  na.omit() %>% 
+  ggplot(mapping=aes(x=bare_ground, y=larvae_success_rate))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)
+```
+
+```{r}
+egg_laying %>% 
+  filter(season=="spring") %>% 
+  na.omit() %>% 
+  ggplot(mapping=aes(x=bare_ground, y=predicted_n))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)
+```
+
 ```{r}
 set.seed(123)
 plant_joined <- data.frame(
@@ -122,7 +190,6 @@ You can also embed plots, for example:
 plot(pressure)
 ```
 ```{r}
-set.seed(123)
 plant_joined <- data.frame(
   occupied = sample(c(0, 1), 200, replace = TRUE),
   temperature_ambient = rnorm(200, mean = 20, sd = 5),
@@ -195,4 +262,1089 @@ server <- function(input, output, session) {
 
 shinyApp(ui, server)
 ```
+
+```{r}
+library(shiny)
+library(bslib)
+library(ggplot2)
+library(dplyr)
+
+# Create sample data that matches your structure
+set.seed(123)
+plant_joined <- data.frame(
+  occupied = sample(c(0, 1), 200, replace = TRUE),
+  temperature_ambient = rnorm(200, mean = 20, sd = 5),
+  temperature_soil = rnorm(200, mean = 18, sd = 4),
+  season.x = sample(c("autumn", "spring"), 200, replace = TRUE)
+)
+
+# Custom theme without Google fonts
+my_theme <- bs_theme(
+  bg = "#f8f9fa",
+  fg = "#212529",
+  primary = "#0d6efd",
+  version = 5
+)
+
+ui <- page_sidebar(
+  title = "🌿 Plant Environmental Analysis Dashboard",
+  theme = my_theme,
+  sidebar = sidebar(
+    width = 280,
+    class = "bg-light",
+    h4("Analysis Controls", class = "text-primary"),
+    hr(),
+    radioButtons(
+      "season",
+      "Select Season:",
+      choices = c("🍂 Autumn" = "autumn", "🌸 Spring" = "spring"),
+      selected = "autumn"
+    ),
+    hr(),
+    div(
+      class = "p-3 bg-white rounded",
+      h6("Dataset Info", class = "text-secondary"),
+      p(
+        strong("Total Records: "), 
+        nrow(plant_joined),
+        style = "margin-bottom: 5px;"
+      ),
+      p(
+        strong("Variables: "), 
+        "4",
+        style = "margin-bottom: 5px;"
+      ),
+      p(
+        strong("Seasons: "), 
+        "Autumn, Spring",
+        style = "margin-bottom: 0;"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = c(6, 6),
+    card(
+      class = "shadow-sm",
+      card_header(
+        class = "bg-primary text-white",
+        "Occupancy Distribution by Status"
+      ),
+      card_body(
+        plotOutput("occupancy_plot", height = "350px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Bar chart showing occupied vs unoccupied observations"
+      )
+    ),
+    card(
+      class = "shadow-sm",
+      card_header(
+        class = "bg-success text-white",
+        "Soil Temperature Distribution"
+      ),
+      card_body(
+        plotOutput("temp_soil_plot", height = "350px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Density plot of soil temperature measurements"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = 12,
+    card(
+      class = "shadow-sm mt-3",
+      card_header(
+        class = "bg-info text-white",
+        "Summary Statistics"
+      ),
+      card_body(
+        tableOutput("summary_table")
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  
+  filtered_data <- reactive({
+    plant_joined %>% 
+      filter(season.x == input$season)
+  })
+  
+  output$occupancy_plot <- renderPlot({
+    filtered_data() %>%
+      mutate(
+        occupied = factor(occupied, levels = c(0, 1), labels = c("Unoccupied", "Occupied"))
+      ) %>% 
+      ggplot(aes(x = occupied, fill = occupied)) +
+      geom_bar(color = "white", linewidth = 1.2, alpha = 0.9) +
+      scale_fill_manual(
+        values = c("Unoccupied" = "#e74c3c", "Occupied" = "#3498db"),
+        name = "Status"
+      ) +
+      labs(
+        x = "Occupancy Status",
+        y = "Count",
+        title = paste(tools::toTitleCase(input$season), "Season")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        panel.grid.major.x = element_blank(),
+        legend.position = "bottom",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold")
+      )
+  })
+  
+  output$temp_soil_plot <- renderPlot({
+    filtered_data() %>%
+      ggplot(aes(x = temperature_soil, color = season.x, fill = season.x)) +
+      geom_density(alpha = 0.6, linewidth = 1.5) +
+      scale_color_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#2ecc71"),
+        name = "Season"
+      ) +
+      scale_fill_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#2ecc71"),
+        name = "Season"
+      ) +
+      labs(
+        x = "Soil Temperature (°C)",
+        y = "Density",
+        title = paste(tools::toTitleCase(input$season), "Soil Temperature Profile")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        legend.position = "bottom",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold"),
+        panel.grid.minor = element_blank()
+      )
+  })
+  
+  output$summary_table <- renderTable({
+    filtered_data() %>%
+      group_by(occupied) %>%
+      summarise(
+        Count = n(),
+        `Avg Ambient Temp (°C)` = round(mean(temperature_ambient), 2),
+        `Avg Soil Temp (°C)` = round(mean(temperature_soil), 2),
+        `SD Ambient Temp` = round(sd(temperature_ambient), 2),
+        `SD Soil Temp` = round(sd(temperature_soil), 2)
+      ) %>%
+      mutate(
+        occupied = case_when(
+          occupied == 0 ~ "Unoccupied",
+          occupied == 1 ~ "Occupied"
+        )
+      ) %>%
+      rename(`Occupancy Status` = occupied)
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
+}
+
+shinyApp(ui, server)
+```
+
+```{r}
+library(shiny)
+library(bslib)
+library(ggplot2)
+library(dplyr)
+
+# Create sample data that matches your structure with spatial coordinates
+set.seed(123)
+plant_joined <- data.frame(
+  occupied = sample(c(0, 1), 200, replace = TRUE),
+  temperature_ambient = rnorm(200, mean = 20, sd = 5),
+  temperature_soil = rnorm(200, mean = 18, sd = 4),
+  season.x = sample(c("autumn", "spring"), 200, replace = TRUE),
+  latitude = runif(200, min = 40, max = 45),
+  longitude = runif(200, min = -75, max = -70)
+)
+
+# Custom theme without Google fonts
+my_theme <- bs_theme(
+  bg = "#f8f9fa",
+  fg = "#212529",
+  primary = "#0d6efd",
+  version = 5
+)
+
+ui <- page_sidebar(
+  title = "🌿 Plant Environmental Analysis Dashboard",
+  theme = my_theme,
+  sidebar = sidebar(
+    width = 280,
+    class = "bg-light",
+    h4("Analysis Controls", class = "text-primary"),
+    hr(),
+    radioButtons(
+      "season",
+      "Select Season:",
+      choices = c("🍂 Autumn" = "autumn", "🌸 Spring" = "spring"),
+      selected = "autumn"
+    ),
+    hr(),
+    selectInput(
+      "temp_var",
+      "Temperature Variable for Heatmap:",
+      choices = c("Ambient Temperature" = "temperature_ambient",
+                  "Soil Temperature" = "temperature_soil"),
+      selected = "temperature_ambient"
+    ),
+    hr(),
+    div(
+      class = "p-3 bg-white rounded",
+      h6("Dataset Info", class = "text-secondary"),
+      p(
+        strong("Total Records: "), 
+        nrow(plant_joined),
+        style = "margin-bottom: 5px;"
+      ),
+      p(
+        strong("Variables: "), 
+        "6",
+        style = "margin-bottom: 5px;"
+      ),
+      p(
+        strong("Seasons: "), 
+        "Autumn, Spring",
+        style = "margin-bottom: 0;"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = c(6, 6),
+    card(
+      class = "shadow-sm",
+      card_header(
+        class = "bg-primary text-white",
+        "Occupancy Distribution by Status"
+      ),
+      card_body(
+        plotOutput("occupancy_plot", height = "350px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Bar chart showing occupied vs unoccupied observations"
+      )
+    ),
+    card(
+      class = "shadow-sm",
+      card_header(
+        class = "bg-success text-white",
+        "Soil Temperature Distribution"
+      ),
+      card_body(
+        plotOutput("temp_soil_plot", height = "350px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Density plot of soil temperature measurements"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = 12,
+    card(
+      class = "shadow-sm mt-3",
+      card_header(
+        class = "bg-danger text-white",
+        "Spatial Temperature Heatmap"
+      ),
+      card_body(
+        plotOutput("heatmap_plot", height = "450px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Geographic distribution of temperature measurements"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = 12,
+    card(
+      class = "shadow-sm mt-3",
+      card_header(
+        class = "bg-info text-white",
+        "Summary Statistics"
+      ),
+      card_body(
+        tableOutput("summary_table")
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  
+  filtered_data <- reactive({
+    plant_joined %>% 
+      filter(season.x == input$season)
+  })
+  
+  output$occupancy_plot <- renderPlot({
+    filtered_data() %>%
+      mutate(
+        occupied = factor(occupied, levels = c(0, 1), labels = c("Unoccupied", "Occupied"))
+      ) %>% 
+      ggplot(aes(x = occupied, fill = occupied)) +
+      geom_bar(color = "white", linewidth = 1.2, alpha = 0.9) +
+      scale_fill_manual(
+        values = c("Unoccupied" = "#e74c3c", "Occupied" = "#3498db"),
+        name = "Status"
+      ) +
+      labs(
+        x = "Occupancy Status",
+        y = "Count",
+        title = paste(tools::toTitleCase(input$season), "Season")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        panel.grid.major.x = element_blank(),
+        legend.position = "bottom",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold")
+      )
+  })
+  
+  output$temp_soil_plot <- renderPlot({
+    filtered_data() %>%
+      ggplot(aes(x = temperature_soil, color = season.x, fill = season.x)) +
+      geom_density(alpha = 0.6, linewidth = 1.5) +
+      scale_color_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#2ecc71"),
+        name = "Season"
+      ) +
+      scale_fill_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#2ecc71"),
+        name = "Season"
+      ) +
+      labs(
+        x = "Soil Temperature (°C)",
+        y = "Density",
+        title = paste(tools::toTitleCase(input$season), "Soil Temperature Profile")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        legend.position = "bottom",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold"),
+        panel.grid.minor = element_blank()
+      )
+  })
+  
+  output$heatmap_plot <- renderPlot({
+    temp_label <- ifelse(input$temp_var == "temperature_ambient", 
+                         "Ambient Temperature (°C)", 
+                         "Soil Temperature (°C)")
+    
+    filtered_data() %>%
+      ggplot(aes(x = longitude, y = latitude)) +
+      geom_point(aes(color = .data[[input$temp_var]]), size = 4, alpha = 0.7) +
+      scale_color_gradient2(
+        low = "#3498db",
+        mid = "#f39c12",
+        high = "#e74c3c",
+        midpoint = mean(filtered_data()[[input$temp_var]], na.rm = TRUE),
+        name = temp_label
+      ) +
+      labs(
+        x = "Longitude",
+        y = "Latitude",
+        title = paste(tools::toTitleCase(input$season), "-", temp_label, "Spatial Distribution")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        legend.position = "right",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold"),
+        panel.grid = element_line(color = "gray90")
+      )
+  })
+  
+  output$summary_table <- renderTable({
+    filtered_data() %>%
+      group_by(occupied) %>%
+      summarise(
+        Count = n(),
+        `Avg Ambient Temp (°C)` = round(mean(temperature_ambient), 2),
+        `Avg Soil Temp (°C)` = round(mean(temperature_soil), 2),
+        `SD Ambient Temp` = round(sd(temperature_ambient), 2),
+        `SD Soil Temp` = round(sd(temperature_soil), 2)
+      ) %>%
+      mutate(
+        occupied = case_when(
+          occupied == 0 ~ "Unoccupied",
+          occupied == 1 ~ "Occupied"
+        )
+      ) %>%
+      rename(`Occupancy Status` = occupied)
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
+}
+
+shinyApp(ui, server)
+
+```
+```{r}
+library(shiny)
+library(bslib)
+library(ggplot2)
+library(dplyr)
+
+# Create sample data with leaf height and sward height
+set.seed(123)
+plant_joined <- data.frame(
+  occupied = sample(c(0, 1), 200, replace = TRUE),
+  temperature_ambient = rnorm(200, mean = 20, sd = 5),
+  temperature_soil = rnorm(200, mean = 18, sd = 4),
+  season.x = sample(c("autumn", "spring"), 200, replace = TRUE),
+  leaf_height = rnorm(200, mean = 15, sd = 3),
+  sward_height = rnorm(200, mean = 10, sd = 2.5)
+)
+
+# Create simple linear models for prediction
+leaf_model <- lm(leaf_height ~ temperature_soil, data = plant_joined)
+sward_model <- lm(sward_height ~ temperature_soil, data = plant_joined)
+
+# Custom theme without Google fonts
+my_theme <- bs_theme(
+  bg = "#f8f9fa",
+  fg = "#212529",
+  primary = "#0d6efd",
+  version = 5
+)
+
+ui <- page_sidebar(
+  title = "🌿 Plant Environmental Analysis Dashboard",
+  theme = my_theme,
+  sidebar = sidebar(
+    width = 280,
+    class = "bg-light",
+    h4("Analysis Controls", class = "text-primary"),
+    hr(),
+    radioButtons(
+      "season",
+      "Select Season:",
+      choices = c("🍂 Autumn" = "autumn", "🌸 Spring" = "spring"),
+      selected = "autumn"
+    ),
+    hr(),
+    sliderInput(
+      "temp_prediction",
+      "Ground Temperature for Prediction (°C):",
+      min = 5,
+      max = 30,
+      value = 18,
+      step = 0.5
+    ),
+    hr(),
+    div(
+      class = "p-3 bg-white rounded",
+      h6("Dataset Info", class = "text-secondary"),
+      p(
+        strong("Total Records: "), 
+        nrow(plant_joined),
+        style = "margin-bottom: 5px;"
+      ),
+      p(
+        strong("Variables: "), 
+        "6",
+        style = "margin-bottom: 5px;"
+      ),
+      p(
+        strong("Seasons: "), 
+        "Autumn, Spring",
+        style = "margin-bottom: 0;"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = c(6, 6),
+    card(
+      class = "shadow-sm",
+      card_header(
+        class = "bg-primary text-white",
+        "Occupancy Distribution by Status"
+      ),
+      card_body(
+        plotOutput("occupancy_plot", height = "350px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Bar chart showing occupied vs unoccupied observations"
+      )
+    ),
+    card(
+      class = "shadow-sm",
+      card_header(
+        class = "bg-success text-white",
+        "Soil Temperature Distribution"
+      ),
+      card_body(
+        plotOutput("temp_soil_plot", height = "350px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Density plot of soil temperature measurements"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = 12,
+    card(
+      class = "shadow-sm mt-3",
+      card_header(
+        class = "bg-warning text-dark",
+        "Height Predictions Based on Ground Temperature"
+      ),
+      card_body(
+        plotOutput("prediction_plot", height = "450px")
+      ),
+      card_footer(
+        class = "text-muted small",
+        "Predicted leaf and sward heights based on soil temperature with regression lines"
+      )
+    )
+  ),
+  layout_columns(
+    col_widths = 12,
+    card(
+      class = "shadow-sm mt-3",
+      card_header(
+        class = "bg-info text-white",
+        "Summary Statistics"
+      ),
+      card_body(
+        tableOutput("summary_table")
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  
+  filtered_data <- reactive({
+    plant_joined %>% 
+      filter(season.x == input$season)
+  })
+  
+  predicted_values <- reactive({
+    leaf_pred <- predict(leaf_model, newdata = data.frame(temperature_soil = input$temp_prediction))
+    sward_pred <- predict(sward_model, newdata = data.frame(temperature_soil = input$temp_prediction))
+    
+    data.frame(
+      Variable = c("Leaf Height", "Sward Height"),
+      Predicted_Value = c(leaf_pred, sward_pred)
+    )
+  })
+  
+  output$occupancy_plot <- renderPlot({
+    filtered_data() %>%
+      mutate(
+        occupied = factor(occupied, levels = c(0, 1), labels = c("Unoccupied", "Occupied"))
+      ) %>% 
+      ggplot(aes(x = occupied, fill = occupied)) +
+      geom_bar(color = "white", linewidth = 1.2, alpha = 0.9) +
+      scale_fill_manual(
+        values = c("Unoccupied" = "#e74c3c", "Occupied" = "#3498db"),
+        name = "Status"
+      ) +
+      labs(
+        x = "Occupancy Status",
+        y = "Count",
+        title = paste(tools::toTitleCase(input$season), "Season")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        panel.grid.major.x = element_blank(),
+        legend.position = "bottom",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold")
+      )
+  })
+  
+  output$temp_soil_plot <- renderPlot({
+    filtered_data() %>%
+      ggplot(aes(x = temperature_soil, color = season.x, fill = season.x)) +
+      geom_density(alpha = 0.6, linewidth = 1.5) +
+      scale_color_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#2ecc71"),
+        name = "Season"
+      ) +
+      scale_fill_manual(
+        values = c("autumn" = "#D2691E", "spring" = "#2ecc71"),
+        name = "Season"
+      ) +
+      labs(
+        x = "Soil Temperature (°C)",
+        y = "Density",
+        title = paste(tools::toTitleCase(input$season), "Soil Temperature Profile")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        legend.position = "bottom",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold"),
+        panel.grid.minor = element_blank()
+      )
+  })
+  
+  output$prediction_plot <- renderPlot({
+    pred_data <- filtered_data()
+    pred_vals <- predicted_values()
+    
+    # Create prediction point data
+    pred_point <- data.frame(
+      temperature_soil = rep(input$temp_prediction, 2),
+      height = pred_vals$Predicted_Value,
+      variable = pred_vals$Variable
+    )
+    
+    # Combine data for both variables
+    plot_data <- bind_rows(
+      pred_data %>% 
+        select(temperature_soil, leaf_height) %>% 
+        rename(height = leaf_height) %>%
+        mutate(variable = "Leaf Height"),
+      pred_data %>% 
+        select(temperature_soil, sward_height) %>% 
+        rename(height = sward_height) %>%
+        mutate(variable = "Sward Height")
+    )
+    
+    ggplot(plot_data, aes(x = temperature_soil, y = height, color = variable)) +
+      geom_point(alpha = 0.4, size = 2) +
+      geom_smooth(method = "lm", se = TRUE, linewidth = 1.2) +
+      geom_point(data = pred_point, aes(x = temperature_soil, y = height, color = variable),
+                 size = 6, shape = 18) +
+      geom_vline(xintercept = input$temp_prediction, linetype = "dashed", color = "gray50") +
+      scale_color_manual(
+        values = c("Leaf Height" = "#2ecc71", "Sward Height" = "#9b59b6"),
+        name = "Measurement"
+      ) +
+      labs(
+        x = "Ground Temperature (°C)",
+        y = "Height (cm)",
+        title = paste("Height Predictions at", input$temp_prediction, "°C"),
+        subtitle = paste("Leaf:", round(pred_vals$Predicted_Value[1], 2), "cm | Sward:", 
+                        round(pred_vals$Predicted_Value[2], 2), "cm")
+      ) +
+      theme_minimal(base_size = 14) +
+      theme(
+        plot.title = element_text(hjust = 0.5, face = "bold", size = 16),
+        plot.subtitle = element_text(hjust = 0.5, size = 12, color = "gray30"),
+        legend.position = "bottom",
+        axis.text = element_text(size = 12),
+        axis.title = element_text(face = "bold"),
+        panel.grid.minor = element_blank()
+      )
+  })
+  
+  output$summary_table <- renderTable({
+    filtered_data() %>%
+      group_by(occupied) %>%
+      summarise(
+        Count = n(),
+        `Avg Ambient Temp (°C)` = round(mean(temperature_ambient), 2),
+        `Avg Soil Temp (°C)` = round(mean(temperature_soil), 2),
+        `Avg Leaf Height (cm)` = round(mean(leaf_height), 2),
+        `Avg Sward Height (cm)` = round(mean(sward_height), 2)
+      ) %>%
+      mutate(
+        occupied = case_when(
+          occupied == 0 ~ "Unoccupied",
+          occupied == 1 ~ "Occupied"
+        )
+      ) %>%
+      rename(`Occupancy Status` = occupied)
+  }, striped = TRUE, hover = TRUE, bordered = TRUE)
+}
+
+shinyApp(ui, server)
+```
+```{r}
+library(shiny)
+library(bslib)
+library(ggplot2)
+library(dplyr)
+
+# Create sample data that matches your structure
+set.seed(123)
+plant_joined <- data.frame(
+  occupied = sample(c(0, 1), 200, replace = TRUE),
+  temperature_ambient = rnorm(200, mean = 20, sd = 5),
+  temperature_soil = rnorm(200, mean = 18, sd = 4),
+  season.x = sample(c("autumn", "spring"), 200, replace = TRUE)
+)
+
+ui <- page_fillable(
+  title = "Plant Data Slideshow",
+  card(
+    card_header(
+      "Plant Data Exploration",
+      class = "d-flex justify-content-between align-items-center"
+    ),
+    card_body(
+      min_height = "500px",
+      uiOutput("slide_content")
+    ),
+    card_footer(
+      class = "d-flex justify-content-between align-items-center",
+      div(
+        actionButton("prev_slide", "← Previous", class = "btn-primary"),
+        actionButton("next_slide", "Next →", class = "btn-primary")
+      ),
+      div(
+        textOutput("slide_counter"),
+        style = "font-weight: bold; font-size: 16px;"
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  # Reactive value to track current slide
+  current_slide <- reactiveVal(1)
+  total_slides <- 4
+  
+  # Previous slide
+  observeEvent(input$prev_slide, {
+    new_slide <- current_slide() - 1
+    if (new_slide < 1) new_slide <- total_slides
+    current_slide(new_slide)
+  })
+  
+  # Next slide
+  observeEvent(input$next_slide, {
+    new_slide <- current_slide() + 1
+    if (new_slide > total_slides) new_slide <- 1
+    current_slide(new_slide)
+  })
+  
+  # Slide counter
+  output$slide_counter <- renderText({
+    paste("Slide", current_slide(), "of", total_slides)
+  })
+  
+  # Slide content
+  output$slide_content <- renderUI({
+    slide_num <- current_slide()
+    
+    if (slide_num == 1) {
+      # Slide 1: Occupancy by Season
+      tagList(
+        h3("Occupancy Distribution by Season"),
+        layout_columns(
+          plotOutput("occupancy_autumn", height = "400px"),
+          plotOutput("occupancy_spring", height = "400px")
+        )
+      )
+    } else if (slide_num == 2) {
+      # Slide 2: Soil Temperature Density
+      tagList(
+        h3("Soil Temperature Distribution"),
+        plotOutput("temp_soil_both", height = "450px")
+      )
+    } else if (slide_num == 3) {
+      # Slide 3: Ambient Temperature Density
+      tagList(
+        h3("Ambient Temperature Distribution"),
+        plotOutput("temp_ambient_both", height = "450px")
+      )
+    } else {
+      # Slide 4: Summary Statistics
+      tagList(
+        h3("Summary Statistics"),
+        layout_columns(
+          card(
+            card_header("Autumn Statistics"),
+            tableOutput("autumn_summary")
+          ),
+          card(
+            card_header("Spring Statistics"),
+            tableOutput("spring_summary")
+          )
+        )
+      )
+    }
+  })
+  
+  # Slide 1 plots
+  output$occupancy_autumn <- renderPlot({
+    plant_joined %>% 
+      filter(season.x == "autumn") %>%
+      mutate(occupied = factor(occupied)) %>% 
+      ggplot(aes(x = occupied)) +
+      geom_bar(aes(fill = season.x), color = "black", position = "dodge") +
+      scale_fill_manual(values = c("autumn" = "#D2691E")) +
+      labs(title = "Autumn", x = "Occupied", y = "Count", fill = "Season") +
+      theme_minimal() +
+      theme(text = element_text(size = 14))
+  })
+  
+  output$occupancy_spring <- renderPlot({
+    plant_joined %>% 
+      filter(season.x == "spring") %>%
+      mutate(occupied = factor(occupied)) %>% 
+      ggplot(aes(x = occupied)) +
+      geom_bar(aes(fill = season.x), color = "black", position = "dodge") +
+      scale_fill_manual(values = c("spring" = "#90EE90")) +
+      labs(title = "Spring", x = "Occupied", y = "Count", fill = "Season") +
+      theme_minimal() +
+      theme(text = element_text(size = 14))
+  })
+  
+  # Slide 2 plot
+  output$temp_soil_both <- renderPlot({
+    plant_joined %>% 
+      ggplot(aes(x = temperature_soil, color = season.x, fill = season.x)) +
+      geom_density(alpha = 0.5) +
+      scale_color_manual(values = c("autumn" = "#D2691E", "spring" = "#90EE90")) +
+      scale_fill_manual(values = c("autumn" = "#D2691E", "spring" = "#90EE90")) +
+      labs(x = "Soil Temperature", y = "Density", color = "Season", fill = "Season") +
+      theme_minimal() +
+      theme(text = element_text(size = 16))
+  })
+  
+  # Slide 3 plot
+  output$temp_ambient_both <- renderPlot({
+    plant_joined %>% 
+      ggplot(aes(x = temperature_ambient, color = season.x, fill = season.x)) +
+      geom_density(alpha = 0.5) +
+      scale_color_manual(values = c("autumn" = "#D2691E", "spring" = "#90EE90")) +
+      scale_fill_manual(values = c("autumn" = "#D2691E", "spring" = "#90EE90")) +
+      labs(x = "Ambient Temperature", y = "Density", color = "Season", fill = "Season") +
+      theme_minimal() +
+      theme(text = element_text(size = 16))
+  })
+  
+  # Slide 4 tables
+  output$autumn_summary <- renderTable({
+    plant_joined %>%
+      filter(season.x == "autumn") %>%
+      summarise(
+        `Occupancy Rate` = paste0(round(mean(occupied) * 100, 1), "%"),
+        `Avg Soil Temp` = round(mean(temperature_soil), 2),
+        `Avg Ambient Temp` = round(mean(temperature_ambient), 2),
+        `Sample Size` = n()
+      ) %>%
+      tidyr::pivot_longer(everything(), names_to = "Metric", values_to = "Value")
+  }, striped = TRUE, hover = TRUE)
+  
+  output$spring_summary <- renderTable({
+    plant_joined %>%
+      filter(season.x == "spring") %>%
+      summarise(
+        `Occupancy Rate` = paste0(round(mean(occupied) * 100, 1), "%"),
+        `Avg Soil Temp` = round(mean(temperature_soil), 2),
+        `Avg Ambient Temp` = round(mean(temperature_ambient), 2),
+        `Sample Size` = n()
+      ) %>%
+      tidyr::pivot_longer(everything(), names_to = "Metric", values_to = "Value")
+  }, striped = TRUE, hover = TRUE)
+}
+
+shinyApp(ui, server)
+```
+```{r}
+library(shiny)
+library(bslib)
+library(ggplot2)
+library(dplyr)
+
+# Create sample data that matches your structure
+set.seed(123)
+plant_joined <- data.frame(
+  occupied = sample(c(0, 1), 200, replace = TRUE),
+  temperature_ambient = rnorm(200, mean = 20, sd = 5),
+  temperature_soil = rnorm(200, mean = 18, sd = 4),
+  season.x = sample(c("autumn", "spring"), 200, replace = TRUE)
+)
+
+ui <- page_sidebar(
+  title = "Plant Data Correlations",
+  sidebar = sidebar(
+    selectInput(
+      "x_var",
+      "X-axis Variable:",
+      choices = c(
+        "Occupied" = "occupied",
+        "Soil Temperature" = "temperature_soil",
+        "Ambient Temperature" = "temperature_ambient"
+      ),
+      selected = "temperature_soil"
+    ),
+    selectInput(
+      "y_var",
+      "Y-axis Variable:",
+      choices = c(
+        "Occupied" = "occupied",
+        "Soil Temperature" = "temperature_soil",
+        "Ambient Temperature" = "temperature_ambient"
+      ),
+      selected = "temperature_ambient"
+    ),
+    checkboxInput(
+      "color_by_season",
+      "Color by Season",
+      value = TRUE
+    ),
+    checkboxInput(
+      "add_smooth",
+      "Add Trend Line",
+      value = TRUE
+    )
+  ),
+  layout_columns(
+    card(
+      card_header("Correlation Plot"),
+      plotOutput("correlation_plot", height = "500px")
+    ),
+    card(
+      card_header("Correlation Matrix"),
+      plotOutput("correlation_matrix", height = "500px")
+    )
+  ),
+  layout_columns(
+    card(
+      card_header("Autumn Correlations"),
+      plotOutput("autumn_pairs", height = "400px")
+    ),
+    card(
+      card_header("Spring Correlations"),
+      plotOutput("spring_pairs", height = "400px")
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  
+  # Main correlation plot
+  output$correlation_plot <- renderPlot({
+    p <- plant_joined %>% 
+      ggplot(aes_string(x = input$x_var, y = input$y_var))
+    
+    if (input$color_by_season) {
+      p <- p + 
+        geom_point(aes(color = season.x), alpha = 0.6, size = 3) +
+        scale_color_manual(
+          values = c("autumn" = "#D2691E", "spring" = "#90EE90"),
+          name = "Season"
+        )
+    } else {
+      p <- p + geom_point(alpha = 0.6, size = 3)
+    }
+    
+    if (input$add_smooth) {
+      if (input$color_by_season) {
+        p <- p + geom_smooth(aes(color = season.x), method = "lm", se = TRUE)
+      } else {
+        p <- p + geom_smooth(method = "lm", se = TRUE, color = "blue")
+      }
+    }
+    
+    p + 
+      labs(
+        x = names(which(c(
+          "occupied" = "Occupied",
+          "temperature_soil" = "Soil Temperature",
+          "temperature_ambient" = "Ambient Temperature"
+        ) == input$x_var)),
+        y = names(which(c(
+          "occupied" = "Occupied",
+          "temperature_soil" = "Soil Temperature",
+          "temperature_ambient" = "Ambient Temperature"
+        ) == input$y_var))
+      ) +
+      theme_minimal() +
+      theme(text = element_text(size = 14))
+  })
+  
+  # Correlation matrix heatmap
+  output$correlation_matrix <- renderPlot({
+    # Calculate correlation matrix
+    cor_data <- plant_joined %>%
+      select(occupied, temperature_soil, temperature_ambient) %>%
+      cor()
+    
+    # Convert to long format for ggplot
+    cor_long <- as.data.frame(as.table(cor_data))
+    names(cor_long) <- c("Var1", "Var2", "Correlation")
+    
+    # Create labels
+    var_labels <- c(
+      "occupied" = "Occupied",
+      "temperature_soil" = "Soil Temp",
+      "temperature_ambient" = "Ambient Temp"
+    )
+    
+    cor_long$Var1 <- factor(cor_long$Var1, 
+                            levels = c("occupied", "temperature_soil", "temperature_ambient"),
+                            labels = var_labels)
+    cor_long$Var2 <- factor(cor_long$Var2, 
+                            levels = c("occupied", "temperature_soil", "temperature_ambient"),
+                            labels = var_labels)
+    
+    ggplot(cor_long, aes(x = Var1, y = Var2, fill = Correlation)) +
+      geom_tile(color = "white") +
+      geom_text(aes(label = round(Correlation, 2)), size = 6) +
+      scale_fill_gradient2(
+        low = "#0571b0", 
+        mid = "white", 
+        high = "#ca0020",
+        midpoint = 0,
+        limits = c(-1, 1)
+      ) +
+      labs(x = "", y = "") +
+      theme_minimal() +
+      theme(
+        text = element_text(size = 14),
+        axis.text.x = element_text(angle = 45, hjust = 1)
+      )
+  })
+  
+  # Autumn pairs plot
+  output$autumn_pairs <- renderPlot({
+    plant_joined %>%
+      filter(season.x == "autumn") %>%
+      select(occupied, temperature_soil, temperature_ambient) %>%
+      GGally::ggpairs(
+        title = "Autumn Season",
+        upper = list(continuous = GGally::wrap("cor", size = 5)),
+        lower = list(continuous = GGally::wrap("points", alpha = 0.5, color = "#D2691E")),
+        diag = list(continuous = GGally::wrap("densityDiag", fill = "#D2691E", alpha = 0.5))
+      ) +
+      theme_minimal()
+  })
+  
+  # Spring pairs plot
+  output$spring_pairs <- renderPlot({
+    plant_joined %>%
+      filter(season.x == "spring") %>%
+      select(occupied, temperature_soil, temperature_ambient) %>%
+      GGally::ggpairs(
+        title = "Spring Season",
+        upper = list(continuous = GGally::wrap("cor", size = 5)),
+        lower = list(continuous = GGally::wrap("points", alpha = 0.5, color = "#90EE90")),
+        diag = list(continuous = GGally::wrap("densityDiag", fill = "#90EE90", alpha = 0.5))
+      ) +
+      theme_minimal()
+  })
+}
+
+shinyApp(ui, server)
+
+```
+
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
