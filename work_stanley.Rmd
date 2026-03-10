@@ -154,7 +154,9 @@ plant_joined %>%
 
 **Discussion About Plant Nitrogen Plots**
 
-## Factors than may influence 
+## Factors That May Influence Butterfly Preference for Laying Eggs
+
+
 
 ```{r}
 plant_joined %>% 
