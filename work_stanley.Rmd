@@ -90,7 +90,8 @@ plant_joined %>%
   select(season) %>% 
   ggplot(aes(x=season))+ # visually compare the counts of season in this data set
   geom_bar(aes(fill=season))+
-  labs(title="Number of Observations in Each Season", x="Season", y=NULL, fill="Season")
+  labs(title="Number of Observations in Each Season", x="Season", y=NULL, fill="Season")+
+  theme_minimal()
 ```
 
 There are more observations done during the spring season than autumn (a difference of 50 and a spring:autumn ratio of 1.37:1), but it's likely not significant enough to skew the data.
@@ -144,7 +145,8 @@ plant_joined %>%
   ggplot(aes(x=predicted_n, y=veg))+
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)+
-  labs(title="Predicted Plant Nitrogen vs. %Vegetation", x="Predicted Plant Nitrogen (micromole/gram)", y="%Vegetation", color="Season")
+  labs(title="Predicted Plant Nitrogen vs. %Vegetation", x="Predicted Plant Nitrogen (micromole/gram)", y="%Vegetation", color="Season")+
+  theme_minimal()
 ```
 
 
@@ -156,7 +158,8 @@ plant_joined %>%
   ggplot(aes(x=predicted_n, y=sward_height))+
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)+
-  labs(title="Predicted Plant Nitrogen vs. Sward Height", x="Predicted Plant Nitrogen (micromole/gram)", y="Sward Height (cm)", color="Season")
+  labs(title="Predicted Plant Nitrogen vs. Sward Height", x="Predicted Plant Nitrogen (micromole/gram)", y="Sward Height (cm)", color="Season")+
+  theme_minimal()
 ```
 
 **Plot of Predicted Plant Nitrogen vs. Soil Temperature**
@@ -167,18 +170,17 @@ plant_joined %>%
   ggplot(aes(x=predicted_n, y=temperature_soil))+
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)+
-  labs(title="Predicted Plant Nitrogen vs. Soil Temperature", x="Predicted Plant Nitrogen (micromol/g)", y="Soil Temperature (°C)", color="Season")
+  labs(title="Predicted Plant Nitrogen vs. Soil Temperature", x="Predicted Plant Nitrogen (micromol/g)", y="Soil Temperature (°C)", color="Season")+
+  theme_minimal()
 ```
 
 **Discussion About Vegetation-Related Plant Nitrogen Plots**
 
-From the plots, we see that the correlation of plant nitrogen and vegetation % or sward height is actually negative. 
-The only correlation that matches our prediction is the negative correlation of plant nitrogen and soil temperature. The different seasons in each plot occupy a different area, with plants in spring usually having a larger vegetation area, taller plant height, and greater soil temperature at a significantly lower plant nitrogen than plants in autumn.
+From the plots, we see that the correlation of plant nitrogen and vegetation % or sward height is actually negative. The only correlation that matches our prediction is the negative correlation of plant nitrogen and soil temperature. The different seasons in each plot occupy a different area, with plants in spring usually having a larger vegetation area, taller plant height, and greater soil temperature at a significantly lower plant nitrogen than plants in autumn.
 
 **Leaf and Plant Size as a Possible Indicator of Plant Nitrogen**
 
-One of the important uses of nitrogen for plants is the creation of chlorophyll, a green pigment required for photosynthesis. Having a larger leaf area could mean a higher total amount of chlorophyll and a higher nitrogen content in a plant. A larger plant would also have a larger biomass
-We can test whether leaf and plant size are positive associated with plant nitrogen content.
+One of the important uses of nitrogen for plants is the creation of chlorophyll, a green pigment required for photosynthesis. Having a larger leaf area could mean a higher total amount of chlorophyll and a higher nitrogen content in a plant. A larger plant would also have a larger biomass and would require more nitrogen from the soil. We can test whether leaf and plant size are positive associated with plant nitrogen content.
 
 ```{r}
 plant_joined %>% 
@@ -187,7 +189,8 @@ plant_joined %>%
   ggplot(aes(x=predicted_n, y=total_leaf_area))+
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)+
-  labs(title="Predicted Plant Nitrogen vs. Average Leaf Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Average Leaf Area (mm^2)", color="Season")
+  labs(title="Predicted Plant Nitrogen vs. Average Leaf Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Average Leaf Area (mm^2)", color="Season")+
+  theme_minimal()
 ```
 
 ```{r}
@@ -197,61 +200,24 @@ plant_joined %>%
   ggplot(aes(x=predicted_n, y=plant_area))+
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)+
-  labs(title="Predicted Plant Nitrogen vs. Plant Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Plant Area (cm^2)", color="Season")
+  labs(title="Predicted Plant Nitrogen vs. Plant Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Plant Area (cm^2)", color="Season")+
+  theme_minimal()
 ```
 
 
 **Discussion About Leaf 
 
-## Factors That May Influence Butterfly Preference for Laying Eggs
 
+# Factors That May Affect Butterfly Preference Factors
 
-
-```{r}
-plant_joined %>% 
-  select(temperature_ambient, predicted_n, season) %>% 
-  na.omit() %>% 
-  ggplot(aes(x=season, y=predicted_n))+
-  geom_boxplot(mapping=aes(fill=season))
-```
+The plants in this study are separated between plants with egg/larvae on them and control plants without them. In order to compare the number and survival of eggs and larvae between plants, we will create a separate variable on the plant_joined to label whether a plant is or isn't in the control group.
 
 ```{r}
- plant_joined %>% 
-  ggplot(aes(x=temperature_ambient, color=season, fill=season))+
-  geom_density()
+plant_joined_ce <- plant_joined %>% 
+  mutate(control=case_when(grepl(plant_id, "c") ~ "control",
+                           grepl(plant_id, "e") ~ "not control"))
 ```
 
-```{r}
- plant_joined %>% 
-  ggplot(aes(x=temperature_soil, color=season, fill=season))+
-  geom_density()
-```
-
-```{r}
-plant_joined %>% 
-  select(predicted_n, n_molar) %>% 
-  ggplot(aes(predicted_n, n_molar))+
-  geom_point()
-```
-
-```{r}
-plant_joined %>% 
-  select(occupied, temperature_ambient, season) %>% 
-  mutate(occupied=factor(occupied)) %>% 
-  ggplot(aes(x=occupied))+
-  geom_bar(mapping=aes(fill=season), color="black", position="dodge")
-```
-
-```{r}
-plant_joined %>% 
-  select(occupied, predicted_n, season) %>% 
-  mutate(occupied=factor(occupied)) %>% 
-  ggplot(aes(x=predicted_n))+
-  geom_density(mapping=aes(fill=occupied), position="dodge", alpha=0.5)+
-  facet_wrap(~season, ncol=2, labeller=label_both)
-```
-
-# Do butterflies prefer plants with higher percentage of bare land
 
 ```{r}
 egg_laying %>% 
@@ -260,29 +226,12 @@ egg_laying %>%
   ggplot(mapping=aes(x=bare_ground, y=temperature_soil))+
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)
+
 ```
 
-```{r}
-egg_laying %>% 
-  filter(season=="spring") %>% 
-  na.omit() %>% 
-  ggplot(mapping=aes(x=bare_ground, y=predicted_n))+
-  geom_point(mapping=aes(color=season))+
-  geom_smooth(method="lm", se=T)
-```
 
-```{r}
-plant_joined %>% 
-  na.omit() %>% 
-  mutate(occupied=factor(occupied)) %>% 
-  ggplot(mapping=aes(x=bare))+
-  geom_bar(mapping=aes(fill=occupied), position="dodge")
-```
 
-```{r}
-#egg_laying %>% 
-  #mutate(larvae_egg_ratio=)
-```
+
 
 ## Disclaimer About Data and Correlations
 The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant. This may impact the validity of our study because the data sample isn't representative of plants and butterflies throughout the world. Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.
