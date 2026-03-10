@@ -21,18 +21,23 @@ We will use data from [William B.V. Langdon, Richard Fox, Owen T. Lewis, Host pl
 ```{r}
 egg_laying <- read_csv("data/egg_laying_data.csv") %>% 
   clean_names()
-plant_chemistry <- read.csv("data/plant_chemistry_data.csv") %>%
+plant_chemistry <- read_csv("data/plant_chemistry_data.csv") %>%
   clean_names()
 ```
 
 
 ## Exploratory Data Analysis
 **Looking Into Egg Laying Data Set**
+
 ```{r}
-summary(egg_laying)
+names(egg_laying) # get the names of egg_laying to get the gist of the data set
 ```
 
-Looking into the data, the only indicator of NA's seems to be itself and there doesn't seem to be any other integers or numericals representing NA's.
+```{r}
+summary(egg_laying) # check for abnormal values
+```
+
+Looking into the summary as well as the data set itself, NA's don't seem to be represented as any other integers or numerical-type NA's.
 
 ```{r}
 egg_laying %>% 
@@ -101,8 +106,8 @@ summary(coordtomap) # find the minimum and maximum latitude and longitude
 ```{r}
 lat <- c(51.74 , 51.75) # use 
 long <- c(-1.185 , -1.181)
-bbox <- make_bbox(long, lat, f=0.03) # create
-map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=12)
+bbox <- make_bbox(long, lat, f=0.25) # create
+map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=15)
 ggmap(map1)+
   geom_point(data=coordtomap, aes(longitude, latitude, color=season), size=0.75, alpha=0.8)
 ```
