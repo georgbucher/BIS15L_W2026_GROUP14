@@ -238,5 +238,4 @@ plant_joined %>%
 ```
 
 ## Disclaimer About Data and Correlations
-The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant.
-Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.
+The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant. This may impact the validity of our study because the data sample isn't representative of plants and butterflies throughout the world. Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.
