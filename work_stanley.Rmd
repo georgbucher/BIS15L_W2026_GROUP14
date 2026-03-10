@@ -190,6 +190,17 @@ plant_joined %>%
   labs(title="Predicted Plant Nitrogen vs. Average Leaf Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Average Leaf Area (mm^2)", color="Season")
 ```
 
+```{r}
+plant_joined %>% 
+  select(predicted_n, plant_area, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=predicted_n, y=plant_area))+
+  geom_point(mapping=aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  labs(title="Predicted Plant Nitrogen vs. Plant Area", x="Predicted Plant Nitrogen (micromole/gram)", y="Plant Area (cm^2)", color="Season")
+```
+
+
 **Discussion About Leaf 
 
 ## Factors That May Influence Butterfly Preference for Laying Eggs
