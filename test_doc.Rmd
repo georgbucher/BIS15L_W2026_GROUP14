@@ -39,29 +39,27 @@ egg_lay %>%
 ```
 
 ```{r}
-egg_lay %>% 
+egg_laying %>% 
   ggplot(aes(x = temperature_ambient, y = n_eggs, fill = season)) +
   geom_col()
 ```
 
 ```{r}
-egg_lay %>% 
+egg_laying %>% 
   filter(occupied != 0) %>% 
-  ggplot(aes(x = n_eggs, y = log10(average_leaf_size), fill = season)) +
+  ggplot(aes(x = n_eggs, y = predicted_n, fill = season)) +
   geom_point() +
   geom_smooth(method = "lm", se = FALSE)+
   facet_grid(season~., labeller = label_both)+
   labs(
-    title = "Egg Laying Preference based on Average Leaf Size per Season",
-    x = "Number of Eggs per leaf",
-    y = "Average Leaf Size (log10 mm^2)"
+    title = "Egg Laying Preference based on Nitrogen Concentration per Season",
+    x = "Number of Eggs",
+    y = "Predicted [N]"
   )
 ```
 ```{r}
-egg_lay %>% 
-  mutate(occupied = ifelse(occupied == 0, "unoccupied", "occupied")) %>%
-  ggplot(aes(x = temperature_soil, y = predicted_n, shape = occupied, color = occupied)) +
-  geom_point(size = 1.5)
+plant_joined %>% 
+  ggplot(aes(x = n_molar, y = ))
 ```
 
 ```{r}
