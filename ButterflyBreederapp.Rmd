@@ -4,14 +4,12 @@ output: html_document
 date: "2026-03-12"
 ---
 ```{r}
-suppressPackageStartupMessages({
   library(shiny)
   library(bslib)
   library(ggplot2)
   library(dplyr)
   library(readr)
   library(janitor)
-})
 ```
 
 ```{r setup, include=FALSE}
