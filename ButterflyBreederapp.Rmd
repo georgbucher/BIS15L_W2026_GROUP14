@@ -3,6 +3,14 @@ title: "Butterfly breeder app"
 output: html_document
 date: "2026-03-12"
 ---
+```{r}
+```{r}
+library(shiny)
+library(bslib)
+library(ggplot2)
+library(dplyr)
+```
+```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
@@ -25,13 +33,6 @@ plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c,
 ```
 
 ```{r}
-library(shiny)
-library(bslib)
-library(ggplot2)
-library(dplyr)
-library(readr)
-library(janitor)
-
 
 ui <- page_fillable(
   theme = bs_theme(
