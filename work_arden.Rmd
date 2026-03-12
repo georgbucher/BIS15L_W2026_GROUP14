@@ -93,8 +93,9 @@ egg_laying %>%
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = predicted_n)) +
-  geom_histogram(aes(y = after_stat(density)), color = "black", fill = "lightgreen") +
-  geom_density(color = "red", alpha = 0.4, size = 1.5) +
+  geom_histogram(aes(y = after_stat(density), group = season), color = "black", fill = "green") +
+  geom_density(aes(color = "red"), alpha = 0.4, size = 1.5) +
+  facet_grid(~season, labeller = label_both) +
   labs(
     title = "Distribution of Nitrogen Content for Plants with Butterfly Eggs",
     x = "Plant Nitrogen Content (Mmol/g)",
@@ -149,4 +150,63 @@ egg_laying %>%
     x = "Average Leaf Size (mm^2)",
     y = "Amount of Eggs"
   )
+```
+# Vegetation around Plant
+```{r}
+egg_laying %>%
+  select(veg, n_eggs) %>% 
+  mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
+  ggplot(aes(x = lay_eggs, y = veg, fill = lay_eggs)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("Yes" = "lightblue", "No" = "orange")) +
+  coord_flip() +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(
+    title = "Egg Laying of Butterfiles based on % Vegetation",
+    x = "Any Eggs?",
+    y = "% Vegetation within 50 cm^2"
+    )
+egg_laying %>%
+  filter(n_eggs != 0) %>%
+  ggplot(aes(x = veg, y = n_eggs, color = season)) +
+  geom_jitter(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal() +
+  labs(
+    title = "Amount of Butterfly Eggs Layed based on % Vegetation",
+    x = "% Vegetation within 50 cm^2",
+    y = "Amount of Eggs"
+  )
+```
+# Bare Ground
+```{r}
+egg_laying %>%
+  select(bare_ground, n_eggs) %>% 
+  mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
+  ggplot(aes(x = lay_eggs, y = bare_ground, fill = lay_eggs)) +
+  geom_boxplot() +
+  scale_fill_manual(values = c("Yes" = "lightblue", "No" = "orange")) +
+  coord_flip() +
+  theme_minimal() +
+  theme(legend.position = "none") +
+  labs(
+    title = "Egg Laying of Butterfiles based on % Bare Ground",
+    x = "Any Eggs?",
+    y = "% Bare Ground within 50 cm^2"
+    )
+egg_laying %>%
+  filter(n_eggs != 0) %>%
+  ggplot(aes(x = bare_ground, y = n_eggs, color = season)) +
+  geom_jitter(alpha = 0.7) +
+  geom_smooth(method = "lm", se = FALSE) +
+  theme_minimal() +
+  labs(
+    title = "Amount of Butterfly Eggs Layed based on % Bare Ground",
+    x = "% Bare Ground within 50 cm^2",
+    y = "Amount of Eggs"
+  )
+```
+# Season
+```{r}
 ```
