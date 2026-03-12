@@ -246,11 +246,14 @@ From the plots, we can see a strong correlation between plant nitrogen content a
 
 ## Egg Amount Predictor Shiny App
 
-**Testing QQ Residuals Plot**
+**Creating the Regression Formula for App**
 ```{r}
-egg_calculator <- lm(formula=n_eggs ~ predicted_n + bare_ground + veg + sward_height + plant_area + average_leaf_size + temperature_ambient + temperature_soil, data=plant_joined)
+egg_calculator <- lm(formula=n_eggs ~ predicted_n + bare_ground + veg + sward_height + plant_area + average_leaf_size + temperature_ambient + temperature_soil, data=plant_joined) # create a multivariate regression formula
 egg_calculator_residuals <- egg_calculator$residuals
-hist(egg_calculator_residuals)
+```
+
+**Create QQ Plot**
+```{r}
 qqnorm(egg_calculator_residuals)
 qqline(egg_calculator_residuals)
 ```
@@ -260,6 +263,7 @@ qqline(egg_calculator_residuals)
 summary(egg_calculator)
 ```
 
+**Code of Actual Shiny Code**
 ```{r}
 
 ui <- page_sidebar(
