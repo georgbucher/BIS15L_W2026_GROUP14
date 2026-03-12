@@ -84,14 +84,55 @@ plant_joined %>%
 plant_joined %>% 
   select(season) %>% 
   ggplot(aes(x=season))+ # visually compare the counts of season in this data set
-  geom_bar(aes(fill=season))+
+  geom_bar(aes(fill=season), color="black")+
   labs(title="Number of Observations in Each Season", x="Season", y=NULL, fill="Season")+
   theme_minimal()
 ```
 
-There are more observations done during the spring season than autumn (a difference of 50 and a spring:autumn ratio of 1.37:1), but it's likely not significant enough to skew the data.
+```{r}
+plant_joined %>% 
+  select(season, predicted_n) %>% 
+  ggplot(aes(x=season, y=predicted_n))+
+  geom_boxplot(aes(fill=season))+
+  labs(title="Range of Predicted Nitrogen in Each Season", x="Season", y="Predicted Plant Nitrogen (micromole/gram)", fill="Season")+
+  theme_minimal()
+```
 
-**
+```{r}
+plant_joined %>% 
+  select(season, temperature_soil) %>% 
+  ggplot(aes(x=season, y=temperature_soil))+
+  geom_boxplot(aes(fill=season))+
+  labs(title="Range of Soil Temperature in Each Season", x="Season", y="Soil Temperature (degrees Celsius)", fill="Season")+
+  theme_minimal()
+```
+
+```{r}
+plant_joined %>% 
+  select(season, temperature_ambient) %>% 
+  ggplot(aes(x=season, y=temperature_ambient))+
+  geom_boxplot(aes(fill=season))+
+  labs(title="Range of Ambient Temperature in Each Season", x="Season", y="Ambient Temperature (degrees Celsius)", fill="Season")+
+  theme_minimal()
+```
+
+```{r}
+plant_joined %>% 
+  select(season, average_leaf_size) %>% 
+  ggplot(aes(x=season, y=average_leaf_size))+
+  geom_boxplot(aes(fill=season))+
+  labs(title="Range of Average Leaf Size in Each Season", x="Season", y="Average Leaf Size (mm^2)", fill="Season")+
+  theme_minimal()
+```
+
+```{r}
+plant_joined %>% 
+  select(season, plant_area) %>% 
+  ggplot(aes(x=season, y=plant_area))+
+  geom_boxplot(aes(fill=season))+
+  labs(title="Range of Plant Area in Each Season", x="Season", y="Plant Area (cm^2)", fill="Season")+
+  theme_minimal()
+```
 
 **Creating Map for Data Set**
 
@@ -118,19 +159,11 @@ lat <- c(51.74 , 51.75) #
 long <- c(-1.185 , -1.181)
 bbox <- make_bbox(long, lat, f=0.25) # create bounding box
 map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=15)
-ggmap(map1)+
+ggmap(map1)+ # creating the map itself
   geom_point(data=coordtomap, aes(longitude, latitude, color=season), size=0.75, alpha=0.8)+
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   labs(title="Distribution of Plants Around Shotover Country Park (United Kingdom)", x="Longitude", y="Latitude", color="Season")
 ```
-
-```{r}
-ggmap(map1)+
-  geom_point(data=coordtomap, aes(longitude, latitude, color=season), size=0.75, alpha=0.8)+
-  theme(axis.text.x=element_text(angle=60, hjust=1))+
-  labs(title="Distribution of Plants Around Shotover Country Park (United Kingdom)", x="Longitude", y="Latitude", color="Season")
-```
-
 
 ## Factors Associated with Plant Nutritional Quality
 
@@ -206,7 +239,9 @@ plant_joined %>%
 ```
 
 
-**Discussion About Leaf 
+**Discussion About Leaf and Plant Size**
+
+From the plots, we can see a strong correlation between plant nitrogen content and leaf area or plant area. These results make leaf area and plant area a good predictor of plant nitrogen and, therefore, plant nutrition for butterflies.
 
 
 ## Egg Amount Predictor Shiny App
