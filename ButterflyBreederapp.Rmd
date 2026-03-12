@@ -16,6 +16,9 @@ egg_laying <- read_csv("data/egg_laying_data.csv") %>%
 plant_chemistry <- read_csv("data/plant_chemistry_data.csv") %>%
   clean_names()
 ```
+```{r}
+install.packages("shiny")
+```
 
 ```{r}
 plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c, cn_percent, n_molar, c_molar, cn_molar, quality_pc1, quality_pc2), by="plant_id")
@@ -26,8 +29,9 @@ library(shiny)
 library(bslib)
 library(ggplot2)
 library(dplyr)
+library(readr)
+library(janitor)
 
-plant_joined 
 
 ui <- page_fillable(
   theme = bs_theme(
@@ -36,7 +40,7 @@ ui <- page_fillable(
     primary = "#FF6B9D",
     "navbar-bg" = "#4A90E2"
   ),
-  
+
   tags$head(
     tags$style(HTML("
       body {
@@ -67,28 +71,42 @@ ui <- page_fillable(
       }
     "))
   ),
-  
+
   div(
     style = "padding: 20px;",
     h2("🦋 Butterfly Breeder App 🦋", style = "text-align: center;"),
-    
+
     layout_columns(
       col_widths = c(3, 9),
-      
-      # Sidebar with controls
+
       card(
         card_header("Breeding Controls"),
         div(class = "butterfly-emoji", "🦋"),
-        
+
         sliderInput(
           "nitrogen_range",
-          "Nitrogen Level Range (mg/L):",
-          min = 0,
-          max = 8,
-          value = c(0, 8),
+          "Nitrogen Level Range:",
+          min = floor(min(plant_joined$n, na.rm = TRUE)),
+          max = ceiling(max(plant_joined$n, na.rm = TRUE)),
+          value = c(
+            floor(min(plant_joined$n, na.rm = TRUE)),
+            ceiling(max(plant_joined$n, na.rm = TRUE))
+          ),
           step = 0.1
         ),
-        
+
+        sliderInput(
+          "temp_ambient_range",
+          "Ambient Temperature (°C):",
+          min = floor(min(plant_joined$temperature_ambient, na.rm = TRUE)),
+          max = ceiling(max(plant_joined$temperature_ambient, na.rm = TRUE)),
+          value = c(
+            floor(min(plant_joined$temperature_ambient, na.rm = TRUE)),
+            ceiling(max(plant_joined$temperature_ambient, na.rm = TRUE))
+          ),
+          step = 0.5
+        ),
+
         checkboxGroupInput(
           "seasons",
           "Select Seasons:",
@@ -96,40 +114,38 @@ ui <- page_fillable(
           selected = c("spring", "autumn")
         )
       ),
-      
-      # Main content area
+
       div(
         layout_columns(
           col_widths = c(12),
-          
           card(
-            card_header("Egg Count vs Sword Height by Season"),
+            card_header("Egg Count vs Sward Height by Season"),
             plotOutput("main_plot", height = "450px")
           )
         ),
-        
+
         layout_columns(
           col_widths = c(6, 6),
-          
+
           card(
             card_header("Egg Count Distribution by Season"),
             plotOutput("egg_distribution", height = "350px")
           ),
-          
+
           card(
             card_header("Larvae Count Distribution by Season"),
             plotOutput("larvae_distribution", height = "350px")
           )
         ),
-        
+
         layout_columns(
           col_widths = c(6, 6),
-          
+
           card(
             card_header("Ambient Temperature Effect on Egg Count"),
             plotOutput("temp_eggs", height = "350px")
           ),
-          
+
           card(
             card_header("Leaf Size Effect on Larvae Count"),
             plotOutput("leaf_larvae", height = "350px")
@@ -141,39 +157,45 @@ ui <- page_fillable(
 )
 
 server <- function(input, output, session) {
-  
+
   filtered_data <- reactive({
     plant_joined %>%
       filter(
-        season.x %in% input$seasons,
-        nitrogen_level >= input$nitrogen_range[1],
-        nitrogen_level <= input$nitrogen_range[2]
+        season %in% input$seasons,
+        !is.na(n),
+        !is.na(temperature_ambient),
+        n >= input$nitrogen_range[1],
+        n <= input$nitrogen_range[2],
+        temperature_ambient >= input$temp_ambient_range[1],
+        temperature_ambient <= input$temp_ambient_range[2]
       )
   })
-  
+
   season_colors <- c(
     "spring" = "#90EE90",
     "autumn" = "#D2691E"
   )
-  
+
   output$main_plot <- renderPlot({
     data <- filtered_data()
-    
+
     if (nrow(data) == 0) {
       ggplot() +
-        annotate("text", x = 0.5, y = 0.5, 
-                 label = "No data available for selected filters",
-                 size = 6, color = "gray50") +
+        annotate(
+          "text", x = 0.5, y = 0.5,
+          label = "No data available for selected filters",
+          size = 6, color = "gray50"
+        ) +
         theme_void()
     } else {
-      ggplot(data, aes(x = egg_count, y = sword_height, color = season.x)) +
+      ggplot(data, aes(x = n_eggs, y = sward_height, color = season)) +
         geom_point(size = 3.5, alpha = 0.6) +
         geom_smooth(method = "lm", se = TRUE, alpha = 0.2, linewidth = 1.2) +
-        scale_color_manual(values = season_colors, labels = c("Autumn", "Spring")) +
+        scale_color_manual(values = season_colors) +
         labs(
-          title = "Relationship Between Egg Count and Sword Height",
+          title = "Relationship Between Egg Count and Sward Height",
           x = "Egg Count",
-          y = "Sword Height (cm)",
+          y = "Sward Height",
           color = "Season"
         ) +
         theme_minimal(base_size = 14) +
@@ -183,99 +205,103 @@ server <- function(input, output, session) {
         )
     }
   })
-  
+
   output$egg_distribution <- renderPlot({
     data <- filtered_data()
-    
-    if (nrow(data) == 0) return(NULL)
-    
-    ggplot(data, aes(x = egg_count, fill = season.x)) +
-      geom_histogram(bins = 20, alpha = 0.7, position = "identity") +
-      scale_fill_manual(values = season_colors, labels = c("Autumn", "Spring")) +
-      labs(
-        title = "Egg Count Frequency",
-        x = "Egg Count",
-        y = "Frequency",
-        fill = "Season"
-      ) +
-      theme_minimal(base_size = 12) +
-      theme(
-        plot.title = element_text(hjust = 0.5, face = "bold"),
-        legend.position = "bottom"
-      )
+
+    if (nrow(data) == 0) {
+      ggplot() + theme_void()
+    } else {
+      ggplot(data, aes(x = n_eggs, fill = season)) +
+        geom_histogram(bins = 20, alpha = 0.7, position = "identity") +
+        scale_fill_manual(values = season_colors) +
+        labs(
+          title = "Egg Count Frequency",
+          x = "Egg Count",
+          y = "Frequency",
+          fill = "Season"
+        ) +
+        theme_minimal(base_size = 12) +
+        theme(
+          plot.title = element_text(hjust = 0.5, face = "bold"),
+          legend.position = "bottom"
+        )
+    }
   })
-  
-  # Larvae distribution
+
   output$larvae_distribution <- renderPlot({
     data <- filtered_data()
-    
-    if (nrow(data) == 0) return(NULL)
-    
-    ggplot(data, aes(x = larvae_count, fill = season.x)) +
-      geom_histogram(bins = 20, alpha = 0.7, position = "identity") +
-      scale_fill_manual(values = season_colors, labels = c("Autumn", "Spring")) +
-      labs(
-        title = "Larvae Count Frequency",
-        x = "Larvae Count",
-        y = "Frequency",
-        fill = "Season"
-      ) +
-      theme_minimal(base_size = 12) +
-      theme(
-        plot.title = element_text(hjust = 0.5, face = "bold"),
-        legend.position = "bottom"
-      )
+
+    if (nrow(data) == 0) {
+      ggplot() + theme_void()
+    } else {
+      ggplot(data, aes(x = larvae, fill = season)) +
+        geom_histogram(bins = 20, alpha = 0.7, position = "identity") +
+        scale_fill_manual(values = season_colors) +
+        labs(
+          title = "Larvae Count Frequency",
+          x = "Larvae Count",
+          y = "Frequency",
+          fill = "Season"
+        ) +
+        theme_minimal(base_size = 12) +
+        theme(
+          plot.title = element_text(hjust = 0.5, face = "bold"),
+          legend.position = "bottom"
+        )
+    }
   })
-  
-  # Temperature vs Eggs
+
   output$temp_eggs <- renderPlot({
     data <- filtered_data()
-    
-    if (nrow(data) == 0) return(NULL)
-    
-    ggplot(data, aes(x = temperature_ambient, y = egg_count, color = season.x)) +
-      geom_point(size = 3, alpha = 0.6) +
-      geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
-      scale_color_manual(values = season_colors, labels = c("Autumn", "Spring")) +
-      labs(
-        title = "Ambient Temperature Impact on Eggs",
-        x = "Ambient Temperature (°C)",
-        y = "Egg Count",
-        color = "Season"
-      ) +
-      theme_minimal(base_size = 12) +
-      theme(
-        plot.title = element_text(hjust = 0.5, face = "bold"),
-        legend.position = "bottom"
-      )
+
+    if (nrow(data) == 0) {
+      ggplot() + theme_void()
+    } else {
+      ggplot(data, aes(x = temperature_ambient, y = n_eggs, color = season)) +
+        geom_point(size = 3, alpha = 0.6) +
+        geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+        scale_color_manual(values = season_colors) +
+        labs(
+          title = "Ambient Temperature Impact on Eggs",
+          x = "Ambient Temperature (°C)",
+          y = "Egg Count",
+          color = "Season"
+        ) +
+        theme_minimal(base_size = 12) +
+        theme(
+          plot.title = element_text(hjust = 0.5, face = "bold"),
+          legend.position = "bottom"
+        )
+    }
   })
-  
-  # Leaf Size vs Larvae
+
   output$leaf_larvae <- renderPlot({
     data <- filtered_data()
-    
-    if (nrow(data) == 0) return(NULL)
-    
-    ggplot(data, aes(x = leaf_size, y = larvae_count, color = season.x)) +
-      geom_point(size = 3, alpha = 0.6) +
-      geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
-      scale_color_manual(values = season_colors, labels = c("Autumn", "Spring")) +
-      labs(
-        title = "Leaf Size Impact on Larvae",
-        x = "Leaf Size (cm)",
-        y = "Larvae Count",
-        color = "Season"
-      ) +
-      theme_minimal(base_size = 12) +
-      theme(
-        plot.title = element_text(hjust = 0.5, face = "bold"),
-        legend.position = "bottom"
-      )
+
+    if (nrow(data) == 0) {
+      ggplot() + theme_void()
+    } else {
+      ggplot(data, aes(x = average_leaf_size, y = larvae, color = season)) +
+        geom_point(size = 3, alpha = 0.6) +
+        geom_smooth(method = "lm", se = TRUE, alpha = 0.2) +
+        scale_color_manual(values = season_colors) +
+        labs(
+          title = "Leaf Size Impact on Larvae",
+          x = "Average Leaf Size",
+          y = "Larvae Count",
+          color = "Season"
+        ) +
+        theme_minimal(base_size = 12) +
+        theme(
+          plot.title = element_text(hjust = 0.5, face = "bold"),
+          legend.position = "bottom"
+        )
+    }
   })
 }
 
 shinyApp(ui, server)
-
 ```
 
 Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
