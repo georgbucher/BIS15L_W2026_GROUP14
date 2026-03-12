@@ -10,11 +10,11 @@ library(janitor)
 library(ggplot2)
 library(naniar)
 library(ggmap)
+library(shiny)
+library(shinydashboard)
 library(UKFE)
+library(bslib)
 ```
-
-## Introduction and Motivation
-In this project, we will study the factors that may predict plant nutritional quality and butterfly preference for laying eggs. Butterflies contribute greatly to the wide diversity of flower species by cross-pollination when it feeds on nectar. By learning what factors butterflies have a greater tendency to lay its eggs at, we could possibly predict butterfly behavior based on certain environmental conditions as well as advocate for butterfly habitat protection at crucial areas.
 
 ## Data
 We will use data from [William B.V. Langdon, Richard Fox, Owen T. Lewis, Host plant use is driven by microclimate not nutritional quality in a grassland butterfly](https://doi.org/10.1101/2025.11.15.688506). The original research article and data sets are included in the data folder in this repository.
@@ -36,8 +36,6 @@ names(egg_laying)
 summary(egg_laying) # look at overall distribution of data, check for abnormal values
 ```
 
-Looking into the summary as well as the data set itself, NA's don't seem to be represented as any other integers or numerical-type NA's.
-
 ```{r}
 egg_laying %>% 
   miss_var_summary() #check for NA's
@@ -48,8 +46,6 @@ egg_laying %>%
   gg_miss_var()+ #visualizing the NA's
   labs(title="NA's in Egg Laying Data Set")
 ```
-
-Through the NA summary and plot, we can see the majority of NA's come from environment_date with most of the other NA's from leaf2 and leaf3 measurements. It's possible that they left the environmental measurement dates out on accident as variables besides ambient and soil temperature were measured despite the date being NA. For the leaf measurements, it could be that researchers thought that 1 or 2 leaf measurements of a plant seemed representative of the rest of the plant's leaves.
 
 **Looking Into Plant Chemistry Data Set**
 
@@ -78,7 +74,6 @@ plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c,
 
 **Distribution of Important Variables**
 
-We can compare the number of observations of each season and consider whether data was collected evenly in each.
 ```{r}
 plant_joined %>% 
   select(season) %>% 
@@ -100,20 +95,18 @@ There are more observations done during the spring season than autumn (a differe
 
 **Creating Map for Data Set**
 
-In addition to the packages we've included from lecture, we also added the package `UKFE` to convert the British national grid reference coordinates into latitude and longitude. The SP that each plant has in their gps refers to a 100x100km^2 map. Converting  which is conveniently handled by the ConverGridRef function of UKFE. 
-
 ```{r}
 register_stadiamaps("f9de653c-55a3-4f5b-9672-63291557e012", write = FALSE)
 coordtomap <- egg_laying %>% 
   select(gps, season) %>% 
   na.omit() %>% 
-  separate(gps, into=c("SP", "grid"), sep=2) %>% #separate numerical part from SP 
+  separate(gps, into=c("SP", "grid"), sep=2) %>% # separate numerical part from SP 
   separate(grid, into=c("easting", "northing"), sep=5) %>% # divide number into easting and northing portions
-  mutate(easting=as.numeric(easting)+400000) %>% 
-  mutate(northing=as.numeric(northing)+200000) %>% 
-  rowwise() %>% 
+  mutate(easting=as.numeric(easting)+400000) %>% # convert easting into latitude
+  mutate(northing=as.numeric(northing)+200000) %>% #convert nothing into longitude
+  rowwise() %>% # treat rows as separate groups in order to apply the ConvertGridRef to each row
   mutate(coords=list(ConvertGridRef(c(easting,northing)))) %>% 
-  unnest(coords)
+  unnest(coords) # converts latitude and longitude from the list as separate variables
 ```
 
 ```{r}
@@ -123,13 +116,21 @@ summary(coordtomap) # find the minimum and maximum latitude and longitude
 ```{r}
 lat <- c(51.74 , 51.75) # 
 long <- c(-1.185 , -1.181)
-bbox <- make_bbox(long, lat, f=0.25) # create
+bbox <- make_bbox(long, lat, f=0.25) # create bounding box
 map1 <- get_stadiamap(bbox, maptype="stamen_terrain", zoom=15)
 ggmap(map1)+
   geom_point(data=coordtomap, aes(longitude, latitude, color=season), size=0.75, alpha=0.8)+
   theme(axis.text.x=element_text(angle=60, hjust=1))+
   labs(title="Distribution of Plants Around Shotover Country Park (United Kingdom)", x="Longitude", y="Latitude", color="Season")
 ```
+
+```{r}
+ggmap(map1)+
+  geom_point(data=coordtomap, aes(longitude, latitude, color=season), size=0.75, alpha=0.8)+
+  theme(axis.text.x=element_text(angle=60, hjust=1))+
+  labs(title="Distribution of Plants Around Shotover Country Park (United Kingdom)", x="Longitude", y="Latitude", color="Season")
+```
+
 
 ## Factors Associated with Plant Nutritional Quality
 
@@ -208,30 +209,150 @@ plant_joined %>%
 **Discussion About Leaf 
 
 
-# Factors That May Affect Butterfly Preference Factors
+## Egg Amount Predictor Shiny App
 
-The plants in this study are separated between plants with egg/larvae on them and control plants without them. In order to compare the number and survival of eggs and larvae between plants, we will create a separate variable on the plant_joined to label whether a plant is or isn't in the control group.
+**Testing QQ Residuals Plot**
+```{r}
+egg_calculator <- lm(formula=n_eggs ~ predicted_n + bare_ground + veg + sward_height + plant_area + average_leaf_size + temperature_ambient + temperature_soil, data=plant_joined)
+egg_calculator_residuals <- egg_calculator$residuals
+hist(egg_calculator_residuals)
+qqnorm(egg_calculator_residuals)
+qqline(egg_calculator_residuals)
+```
+
+**Print Linear Regression Model Summary**
+```{r}
+summary(egg_calculator)
+```
 
 ```{r}
-plant_joined_ce <- plant_joined %>% 
-  mutate(control=case_when(grepl(plant_id, "c") ~ "control",
-                           grepl(plant_id, "e") ~ "not control"))
+
+ui <- page_sidebar(
+  title = "Egg Calculator Regression",
+  sidebar = sidebar(
+    
+    # Select predictor variables
+    checkboxGroupInput(
+      "predictor_vars",
+      "Select Predictor Variables:",
+      choices = c("predicted_n",
+                  "bare_ground",
+                  "veg",
+                  "sward_height",
+                  "plant_area",
+                  "average_leaf_size",
+                  "temperature_ambient",
+                  "temperature_soil"
+      ),
+      selected = c("predicted_n")
+    ),
+    
+    # Action button to run regression
+    actionButton("run_regression", "Run Regression", class = "btn-primary mt-3")
+  ),
+  
+  # Main panel with plots and results
+  navset_card_tab(
+    nav_panel(
+      "Scatter Plots",
+      card(
+        card_header("Egg Count vs Predictor Variables"),
+        plotOutput("scatter_plots", height = "600px")
+      )
+    ),
+    nav_panel(
+      "Regression Summary",
+      card(
+        card_header("Model Summary"),
+        verbatimTextOutput("regression_summary")
+      ),
+      card(
+        card_header("Model Coefficients"),
+        tableOutput("coefficients_table")
+      )
+    ),
+    nav_panel(
+      "Diagnostic Plots",
+      card(
+        card_header("Residual Diagnostics"),
+        plotOutput("diagnostic_plots", height = "600px")
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  
+  # Fit regression model when button is clicked
+  model <- eventReactive(input$run_regression, {
+    req(input$predictor_vars)
+    
+    # Create formula with egg count as dependent variable
+    formula_str <- paste("n_eggs ~", paste(input$predictor_vars, collapse = " + "))
+    formula_obj <- as.formula(formula_str)
+    
+    # Fit linear model
+    lm(formula_obj, data = plant_joined)
+  })
+  
+  # Scatter plots
+  output$scatter_plots <- renderPlot({
+    req(input$predictor_vars)
+    
+    n_predictors <- length(input$predictor_vars)
+    
+    # Calculate grid dimensions
+    n_cols <- ceiling(sqrt(n_predictors))
+    n_rows <- ceiling(n_predictors / n_cols)
+    
+    par(mfrow = c(n_rows, n_cols), mar = c(4, 4, 2, 1))
+    
+    for (predictor in input$predictor_vars) {
+      plot(plant_joined[[predictor]], plant_joined$n_eggs,
+           xlab = predictor,
+           ylab = "Egg Count",
+           main = paste("Egg Count vs", predictor),
+           pch = 19,
+           col = rgb(0.2, 0.4, 0.6, 0.6),
+           cex = 1.2)
+      
+      # Add regression line for visualization
+      abline(lm(plant_joined$n_eggs ~ plant_joined[[predictor]]), 
+             col = "red", lwd = 2)
+    }
+  })
+  
+  # Regression summary
+  output$regression_summary <- renderPrint({
+    req(model())
+    summary(model())
+  })
+  
+  # Coefficients table
+  output$coefficients_table <- renderTable({
+    req(model())
+    
+    coef_summary <- summary(model())$coefficients
+    coef_df <- as.data.frame(coef_summary)
+    coef_df$Variable <- rownames(coef_df)
+    coef_df <- coef_df[, c("Variable", "Estimate", "Std. Error", "t value", "Pr(>|t|)")]
+    rownames(coef_df) <- NULL
+    
+    coef_df
+  }, digits = 4)
+  
+  # Diagnostic plots
+  output$diagnostic_plots <- renderPlot({
+    req(model())
+    
+    par(mfrow = c(2, 2))
+    plot(model())
+  })
+}
+
+shinyApp(ui, server)
 ```
 
 
-```{r}
-egg_laying %>% 
-  filter(season=="autumn") %>% 
-  na.omit() %>% 
-  ggplot(mapping=aes(x=bare_ground, y=temperature_soil))+
-  geom_point(mapping=aes(color=season))+
-  geom_smooth(method="lm", se=T)
-
-```
-
-
-
-
-
-## Disclaimer About Data and Correlations
+## Limitations Of Data and Correlations
 The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant. This may impact the validity of our study because the data sample isn't representative of plants and butterflies throughout the world. Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.
