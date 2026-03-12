@@ -1,0 +1,155 @@
+---
+title: "egg_calc"
+output: html_document
+---
+
+## Libraries
+```{r message=FALSE, warning=FALSE}
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+library(naniar)
+library(ggmap)
+library(shiny)
+library(shinydashboard)
+library(bslib)
+```
+
+```{r}
+egg_laying <- read_csv("data/egg_laying_data.csv") %>% 
+  clean_names()
+plant_chemistry <- read_csv("data/plant_chemistry_data.csv") %>%
+  clean_names()
+```
+
+```{r}
+plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c, cn_percent, n_molar, c_molar, cn_molar, quality_pc1, quality_pc2), by="plant_id")
+```
+
+```{r}
+
+ui <- page_sidebar(
+  title = "Egg Calculator Regression",
+  sidebar = sidebar(
+    
+    # Select predictor variables
+    checkboxGroupInput(
+      "predictor_vars",
+      "Select Predictor Variables:",
+      choices = c("predicted_n",
+                  "bare_ground",
+                  "veg",
+                  "sward_height",
+                  "plant_area",
+                  "average_leaf_size",
+                  "temperature_ambient",
+                  "temperature_soil"
+      ),
+      selected = c("predicted_n")
+    ),
+    
+    # Action button to run regression
+    actionButton("run_regression", "Run Regression", class = "btn-primary mt-3")
+  ),
+  
+  # Main panel with plots and results
+  navset_card_tab(
+    nav_panel(
+      "Scatter Plots",
+      card(
+        card_header("Egg Count vs Predictor Variables"),
+        plotOutput("scatter_plots", height = "600px")
+      )
+    ),
+    nav_panel(
+      "Regression Summary",
+      card(
+        card_header("Model Summary"),
+        verbatimTextOutput("regression_summary")
+      ),
+      card(
+        card_header("Model Coefficients"),
+        tableOutput("coefficients_table")
+      )
+    ),
+    nav_panel(
+      "Diagnostic Plots",
+      card(
+        card_header("Residual Diagnostics"),
+        plotOutput("diagnostic_plots", height = "600px")
+      )
+    )
+  )
+)
+
+server <- function(input, output, session) {
+  
+  # Fit regression model when button is clicked
+  model <- eventReactive(input$run_regression, {
+    req(input$predictor_vars)
+    
+    # Create formula with egg count as dependent variable
+    formula_str <- paste("n_eggs ~", paste(input$predictor_vars, collapse = " + "))
+    formula_obj <- as.formula(formula_str)
+    
+    # Fit linear model
+    lm(formula_obj, data = plant_joined)
+  })
+  
+  # Scatter plots
+  output$scatter_plots <- renderPlot({
+    req(input$predictor_vars)
+    
+    n_predictors <- length(input$predictor_vars)
+    
+    # Calculate grid dimensions
+    n_cols <- ceiling(sqrt(n_predictors))
+    n_rows <- ceiling(n_predictors / n_cols)
+    
+    par(mfrow = c(n_rows, n_cols), mar = c(4, 4, 2, 1))
+    
+    for (predictor in input$predictor_vars) {
+      plot(plant_joined[[predictor]], plant_joined$n_eggs,
+           xlab = predictor,
+           ylab = "Egg Count",
+           main = paste("Egg Count vs", predictor),
+           pch = 19,
+           col = rgb(0.2, 0.4, 0.6, 0.6),
+           cex = 1.2)
+      
+      # Add regression line for visualization
+      abline(lm(plant_joined$n_eggs ~ plant_joined[[predictor]]), 
+             col = "red", lwd = 2)
+    }
+  })
+  
+  # Regression summary
+  output$regression_summary <- renderPrint({
+    req(model())
+    summary(model())
+  })
+  
+  # Coefficients table
+  output$coefficients_table <- renderTable({
+    req(model())
+    
+    coef_summary <- summary(model())$coefficients
+    coef_df <- as.data.frame(coef_summary)
+    coef_df$Variable <- rownames(coef_df)
+    coef_df <- coef_df[, c("Variable", "Estimate", "Std. Error", "t value", "Pr(>|t|)")]
+    rownames(coef_df) <- NULL
+    
+    coef_df
+  }, digits = 4)
+  
+  # Diagnostic plots
+  output$diagnostic_plots <- renderPlot({
+    req(model())
+    
+    par(mfrow = c(2, 2))
+    plot(model())
+  })
+}
+
+shinyApp(ui, server)
+```
