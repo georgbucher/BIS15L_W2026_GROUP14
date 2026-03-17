@@ -2,6 +2,7 @@
 title: "arthur_work"
 output: html_document
 date: "2026-02-25"
+runtime: shiny
 ---
 
 ```{r}
@@ -20,14 +21,6 @@ plant_chemistry <- read_csv("data/plant_chemistry_data.csv") %>%
   clean_names()
 ```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
-
-```{r}
-install.packages("shiny")
-install.packages("reshape2")
-```
 
 ## R Markdown
 
@@ -92,7 +85,7 @@ egg_laying %>%
   geom_smooth(method="lm", se=T)
 ```
 
-Next is some of the work I did on building a correlation matrix
+Seporating the seasons
 
 ```{r}
 egg_laying %>% 
@@ -102,6 +95,8 @@ egg_laying %>%
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)
 ```
+Next is some of the work I did on building a correlation matrix
+
 ```{r}
 library(ggplot2)
 library(reshape2)
@@ -130,10 +125,6 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-
-```{r}
-install.packages("shiny")
-```
 
 ```{r}
 plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c, cn_percent, n_molar, c_molar, cn_molar, quality_pc1, quality_pc2), by="plant_id")
