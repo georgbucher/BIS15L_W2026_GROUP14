@@ -47,6 +47,8 @@ egg_laying %>%
   labs(title="NA's in Egg Laying Data Set")
 ```
 
+Through the NA summary and plot, we can see the majority of NA's come from environment_date with most of the other NA's from leaf2 and leaf3 measurements. It's possible that they left the environmental measurement dates out on accident as variables besides ambient and soil temperature were measured despite the date being NA. For the leaf measurements, it could be that researchers thought that 1 or 2 leaf measurements of a plant seemed representative of the rest of the plant's leaves.
+
 **Looking Into Plant Chemistry Data Set**
 
 ```{r}
@@ -66,7 +68,7 @@ The data set, plant_chemistry, is clean and tidy without any NA's or suspicious 
 
 **Joining the Data Sets**
 
-Since the egg_laying and plant_chemistry data sets have the same plant id, we can join the two data sets together using a join function. It's important to know that plant_chemistry also shares the same leaf length, width, area, plant area, and season, so we can select the unique variables of plant_chemistry.
+Since the egg_laying and plant_chemistry data sets have the same plant id, we can join the two data sets together using a join function in case we want to use variables of a plant id from both data sets. It's important to know that plant_chemistry also shares the same leaf length, width, area, plant area, and season, so we can select the unique variables of plant_chemistry.
 
 ```{r}
 plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c, cn_percent, n_molar, c_molar, cn_molar, quality_pc1, quality_pc2), by="plant_id")
@@ -77,13 +79,13 @@ plant_joined <- left_join(egg_laying, plant_chemistry %>% select(plant_id, n, c,
 ```{r}
 plant_joined %>% 
   select(season) %>% 
-  count(season, sort=T) #obtain counts of season numerically
+  count(season, sort=T) 
 ```
 
 ```{r}
 plant_joined %>% 
   select(season) %>% 
-  ggplot(aes(x=season))+ # visually compare the counts of season in this data set
+  ggplot(aes(x=season))+ 
   geom_bar(aes(fill=season), color="black")+
   labs(title="Number of Observations in Each Season", x="Season", y=NULL, fill="Season")+
   theme_minimal()
@@ -134,10 +136,91 @@ plant_joined %>%
   theme_minimal()
 ```
 
+**Interpreting Paper's Principal Component Analysis**
+
+Principal Component Analysis is a dimension-reducing strategy that converts highly correlated variables into non-correlated variables called "principal components". These principal components retain the original data set's variability. Our data set comes with two variables, quality_PC1 and quality_PC2, which are values of principal components that the researchers of the paper got to represent average leaf size and plant size. We can attempt to visualize the principal components' relationships to other variables.
+```{r}
+plant_joined %>% 
+  select(bare_ground, quality_pc1, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=quality_pc1, y=bare_ground))+
+  geom_point(aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  facet_wrap(~season, ncol=2, labeller=label_both)+
+  labs(title="Principal Component 1 vs. %Bare Ground", x="Principal Component 1", y="%Bare Ground", color="Season")+
+  theme_minimal()
+```
+
+```{r}
+plant_joined %>% 
+  select(bare_ground, quality_pc2, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=quality_pc2, y=bare_ground))+
+  geom_point(aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  facet_wrap(~season, ncol=2, labeller=label_both)+
+  labs(title="Principal Component 2 vs. %Bare Ground", x="Principal Component 2", y="%Bare Ground", color="Season")+
+  theme_minimal()
+```
+
+From these plots, we can see that bare ground percentage is negatively correlated with both principal components relating to the average plant and leaf size.
+
+```{r}
+plant_joined %>% 
+  select(veg, quality_pc1, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=quality_pc1, y=veg))+
+  geom_point(aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  facet_wrap(~season, ncol=2, labeller=label_both)+
+  labs(title="Principal Component 1 vs. %Veg", x="Principal Component 1", y="%Veg", color="Season")+
+  theme_minimal()
+```
+
+```{r}
+plant_joined %>% 
+  select(veg, quality_pc2, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=quality_pc2, y=veg))+
+  geom_point(aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  facet_wrap(~season, ncol=2, labeller=label_both)+
+  labs(title="Principal Component 2 vs. %Veg", x="Principal Component 2", y="%Veg", color="Season")+
+  theme_minimal()
+```
+
+From these plots, we see that vegetation percentage is positively correlated with both principal components.
+
+```{r}
+plant_joined %>% 
+  select(litter, quality_pc1, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=quality_pc1, y=litter))+
+  geom_point(aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  facet_wrap(~season, ncol=2, labeller=label_both)+
+  labs(title="Principle Component 1 vs. %Leaf Litter", x="Principle Component 1", y="%Leaf Litter", color="Season")+
+  theme_minimal()
+```
+
+```{r}
+plant_joined %>% 
+  select(litter, quality_pc2, season) %>% 
+  na.omit() %>% 
+  ggplot(aes(x=quality_pc2, y=litter))+
+  geom_point(aes(color=season))+
+  geom_smooth(method="lm", se=T)+
+  facet_wrap(~season, ncol=2, labeller=label_both)+
+  labs(title="Principle Component 2 vs. %Leaf Litter", x="Principle Component 2", y="%Leaf Litter", color="Season")+
+  theme_minimal()
+```
+
+Interestingly, we don't see the same consistent correlations with surrounding leaf litter percentage against both principle components. We see that in autumn, the litter percentage has no correlation between principle component 1 and 2 while in spring, the litter percentage is postive correlated with principle component 1 and negatively correlated with principle component 2.
+
 **Creating Map for Data Set**
 
 ```{r}
-register_stadiamaps("f9de653c-55a3-4f5b-9672-63291557e012", write = FALSE)
+register_stadiamaps("f9de653c-55a3-4f5b-9672-63291557e012", write = FALSE) # will probably take this down after repository check
 coordtomap <- egg_laying %>% 
   select(gps, season) %>% 
   na.omit() %>% 
@@ -245,20 +328,25 @@ From the plots, we can see a strong correlation between plant nitrogen content a
 
 
 ## Egg Amount Predictor Shiny App
+All of our analyses on our data set's variables have been bivariate so far. However, bivariate analyses don't account for other variables' influences on a dependent variable in its correlation. Using multiple regression analysis, we can use multiple predictor variables to predict a dependent variable and see the strength each variable has in influencing it.
 
 **Creating the Regression Formula for App**
 ```{r}
-egg_calculator <- lm(formula=n_eggs ~ predicted_n + bare_ground + veg + sward_height + plant_area + average_leaf_size + temperature_ambient + temperature_soil, data=plant_joined) # create a multivariate regression formula
+egg_calculator <- lm(formula=n_eggs ~ predicted_n + bare_ground + veg + sward_height + plant_area + average_leaf_size + temperature_ambient + temperature_soil, data=plant_joined) # create a multiple regression formula
 egg_calculator_residuals <- egg_calculator$residuals
 ```
 
 **Create QQ Plot**
+
+A QQ Plot can be used in conjunction with a multiple regression analysis to see whether its residuals are normal or not. In the case of this analysis, our data is approximately normal with some skewedness to the right as the plot skews upward.
 ```{r}
 qqnorm(egg_calculator_residuals)
 qqline(egg_calculator_residuals)
 ```
 
-**Print Linear Regression Model Summary**
+**Print Multiple Regression Model Summary**
+
+We can see the estimated effect each variable of our regression model has on our dependent variable, number of eggs. We can see that in the summary, bare ground, sward height, and soil temperature are strong estimators of the number of eggs as its p values are significantly low, as indicated by the asterisks.
 ```{r}
 summary(egg_calculator)
 ```
@@ -394,4 +482,4 @@ shinyApp(ui, server)
 
 
 ## Limitations Of Data and Correlations
-The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant. This may impact the validity of our study because the data sample isn't representative of plants and butterflies throughout the world. Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.
+The data collected and used for the correlations in our study is specifically from the Shotover Country Park in Oxfordshire, United Kingdom. The only the plant species used in this data was Rumex acetosa or sorrel, which limits the study to butterflies that specialize in consuming this plant, specifically Lycaena phlaeas. This may impact the validity of our study because the data sample isn't representative of plants and butterflies throughout the world and our study's findings may not generalize to them. Future studies on the trade-off between plant nutritional value and egg-laying preference could be done in other areas of the world, on other species of plants, and other species of butterflies.

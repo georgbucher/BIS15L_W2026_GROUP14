@@ -3,21 +3,35 @@ title: "work_arden"
 output: html_document
 date: "2026-02-25"
 ---
-# Description
-Rstudio code to analyze egg laying preferences of butterflies via correlations to ambient temperature and nitrogen content.
+# Libraries
 ```{r}
 library(tidyverse)
 library(janitor)
 library(ggplot2)
 ```
 
+# Summary
+Exploration data analysis of egg laying preferences of butterflies based on correlations to ambient temperature, nitrogen content of host plant, etc.  Number of eggs on host plant decided as indicator of preferences (the more eggs laid on the plant, the stronger the suggsted preference).
+\
+Analysis was conducted by plotting at least two plots per relationship:
+\
+1. **Boxplot**: Plots if variable affects the decision to lay eggs at all.  "Yes" indicates presence of eggs on plant.  "No" indicates no eggs found on plant.
+2. **Line Plot**: Shows if variable affects how strongly butterflies prefer the plant, if at all, indicated by the trend line formed.
+\
+Additional plots were made for alternative presentation and analysis of data for the final project.
+
+# Data
+I used the egg laying data from [William B.V. Langdon, Richard Fox, Owen T. Lewis, Host plant use is driven by microclimate not nutritional quality in a grassland butterfly](https://doi.org/10.1101/2025.11.15.688506). The original research article and data sets are included in the data folder in this repository.
 ```{r}
 egg_laying <- read_csv("data/egg_laying_data.csv") %>% 
   clean_names()
 ```
 
-# Ambient Temperature (SCRAPPED DUE TO INCOMPLETE TEMPERATURE RANGE)
+# Data Analysis Proper
+## Ambient Temperature
+Analysis of relationship between number of eggs found on plants and ambient temperature.  **Plots were scrapped** due to incomplete temperature range as there were no plot points at a range of 18°C and 24°C.
 ```{r}
+# Box Plot
 egg_laying %>%
   select(temperature_ambient, n_eggs) %>% 
   mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
@@ -32,6 +46,7 @@ egg_laying %>%
     x = "Any Eggs?",
     y = "Ambient Temperature (°C)"
     )
+# Line Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = temperature_ambient, y = n_eggs, color = season)) +
@@ -43,6 +58,7 @@ egg_laying %>%
     x = "Ambient Temperature (°C)",
     y = "Amount of Eggs"
   )
+# Histogram and Density Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = temperature_ambient)) +
@@ -74,8 +90,10 @@ egg_laying %>%
     y = "Number of Eggs"
   )
 ```
-# Nitrogen Content
+## Nitrogen Content
+Analysis of relationship between number of eggs found on plants and host plant nitrogen content.
 ```{r}
+# Box plot
 egg_laying %>%
   select(predicted_n, n_eggs) %>% 
   mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
@@ -90,17 +108,7 @@ egg_laying %>%
     x = "Any Eggs?",
     y = "Plant Nitrogen Content (Mmol/g)"
     )
-egg_laying %>%
-  filter(n_eggs != 0) %>%
-  ggplot(aes(x = predicted_n)) +
-  geom_histogram(aes(y = after_stat(density), group = season), color = "black", fill = "green") +
-  geom_density(aes(color = "red"), alpha = 0.4, size = 1.5) +
-  facet_grid(~season, labeller = label_both) +
-  labs(
-    title = "Distribution of Nitrogen Content for Plants with Butterfly Eggs",
-    x = "Plant Nitrogen Content (Mmol/g)",
-    y = "Count"
-  )
+# Line Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = predicted_n, y = n_eggs, color = season)) +
@@ -112,9 +120,23 @@ egg_laying %>%
     x = "Plant Nitrogen Content (Mmol/g)",
     y = "Amount of Eggs"
   )
+# Histogram and Density Plot
+egg_laying %>%
+  filter(n_eggs != 0) %>%
+  ggplot(aes(x = predicted_n)) +
+  geom_histogram(aes(y = after_stat(density), group = season), color = "black", fill = "green") +
+  geom_density(aes(color = "red"), alpha = 0.4, size = 1.5) +
+  facet_grid(~season, labeller = label_both) +
+  labs(
+    title = "Distribution of Nitrogen Content for Plants with Butterfly Eggs",
+    x = "Plant Nitrogen Content (Mmol/g)",
+    y = "Count"
+  )
 ```
-# Leaf Size
+## Leaf Size
+Analysis of relationship between number of eggs found on plants and average host plant leaf size.
 ```{r}
+# Box Plot
 egg_laying %>%
   select(average_leaf_size, n_eggs) %>% 
   mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
@@ -129,16 +151,7 @@ egg_laying %>%
     x = "Any Eggs?",
     y = "Average Leaf Size (mm^2)"
     )
-egg_laying %>%
-  filter(n_eggs != 0) %>%
-  ggplot(aes(x = average_leaf_size)) +
-  geom_histogram(aes(y = after_stat(density)), color = "black", fill = "lightgreen") +
-  geom_density(color = "red", alpha = 0.4, size = 1.5) +
-  labs(
-    title = "Distribution of Average Leaf Sizes for Plants with Butterfly Eggs",
-    x = "Average Leaf Size (mm^2)",
-    y = "Count"
-  )
+# Line Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = average_leaf_size, y = n_eggs, color = season)) +
@@ -150,9 +163,22 @@ egg_laying %>%
     x = "Average Leaf Size (mm^2)",
     y = "Amount of Eggs"
   )
+# Histogram and Density Plot
+egg_laying %>%
+  filter(n_eggs != 0) %>%
+  ggplot(aes(x = average_leaf_size)) +
+  geom_histogram(aes(y = after_stat(density)), color = "black", fill = "lightgreen") +
+  geom_density(color = "red", alpha = 0.4, size = 1.5) +
+  labs(
+    title = "Distribution of Average Leaf Sizes for Plants with Butterfly Eggs",
+    x = "Average Leaf Size (mm^2)",
+    y = "Count"
+  )
 ```
-# Vegetation around Plant
+## Vegetation around Plant
+Analysis of relationship between number of eggs found on plants and vegetation surrounding host plant in a 50 cm x 50 cm area.
 ```{r}
+# Box Plot
 egg_laying %>%
   select(veg, n_eggs) %>% 
   mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
@@ -167,6 +193,7 @@ egg_laying %>%
     x = "Any Eggs?",
     y = "% Vegetation within 50 cm^2"
     )
+# Line Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = veg, y = n_eggs, color = season)) +
@@ -179,8 +206,10 @@ egg_laying %>%
     y = "Amount of Eggs"
   )
 ```
-# Bare Ground
+## Bare Ground
+Analysis of relationship between number of eggs found on plants and bare ground surrounding host plant in a 50 cm x 50 cm area.
 ```{r}
+# Box Plot
 egg_laying %>%
   select(bare_ground, n_eggs) %>% 
   mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
@@ -195,6 +224,7 @@ egg_laying %>%
     x = "Any Eggs?",
     y = "% Bare Ground within 50 cm^2"
     )
+# Line Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = bare_ground, y = n_eggs, color = season)) +
@@ -206,7 +236,4 @@ egg_laying %>%
     x = "% Bare Ground within 50 cm^2",
     y = "Amount of Eggs"
   )
-```
-# Season
-```{r}
 ```
