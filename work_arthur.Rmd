@@ -5,6 +5,15 @@ date: "2026-02-25"
 ---
 
 ```{r}
+  library(shiny)
+  library(bslib)
+  library(ggplot2)
+  library(dplyr)
+  library(readr)
+  library(janitor)
+```
+
+```{r}
 egg_laying <- read_csv("data/egg_laying_data.csv") %>% 
   clean_names()
 plant_chemistry <- read_csv("data/plant_chemistry_data.csv") %>%
@@ -17,6 +26,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ```{r}
 install.packages("shiny")
+install.packages("reshape2")
 ```
 
 ## R Markdown
@@ -41,6 +51,7 @@ egg_laying %>%
   theme_minimal() 
 ```
 
+For this next graph I assesed the effects of veigtation
 ```{r}
 egg_laying %>% 
   filter(season %in% c("spring", "autumn")) %>% 
@@ -89,20 +100,29 @@ egg_laying %>%
   geom_point(mapping=aes(color=season))+
   geom_smooth(method="lm", se=T)
 ```
+```{r}
+library(ggplot2)
+library(reshape2)
 
+egg_laying$occupied <- ifelse(egg_laying$occupied == "yes", 1, 0)
+
+corr_matrix <- cor(egg_laying[, c("egg_count", "larvae_count", "nitrogen_level", "occupied", "temperature_ambient", "temperature_soil")], use = "complete.obs")
+corr_matrix[upper.tri(corr_matrix)] <- NA
+corr_long <- melt(corr_matrix, na.rm = TRUE)
+
+ggplot(corr_long, aes(Var1, Var2, fill = value)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = round(value, 2)), size = 4) +
+  scale_fill_gradient2(low = "blue", mid = "white", high = "red", midpoint = 0, limits = c(-1, 1), name = "Correlation") +
+  labs(title = "Correlation Matrix: Factors Affecting Larvae Counts", x = "", y = "") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1), panel.grid = element_blank())
+```
 ---
 title: "Butterfly breeder app"
 output: html_document
 date: "2026-03-12"
 ---
-```{r}
-  library(shiny)
-  library(bslib)
-  library(ggplot2)
-  library(dplyr)
-  library(readr)
-  library(janitor)
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
