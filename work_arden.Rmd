@@ -27,8 +27,8 @@ egg_laying <- read_csv("data/egg_laying_data.csv") %>%
   clean_names()
 ```
 
-# Explortory Data Analysis Proper
-# Ambient Temperature
+# Data Analysis Proper
+## Ambient Temperature
 Analysis of relationship between number of eggs found on plants and ambient temperature.  **Plots were scrapped** due to incomplete temperature range as there were no plot points at a range of 18°C and 24°C.
 ```{r}
 # Box Plot
@@ -90,7 +90,7 @@ egg_laying %>%
     y = "Number of Eggs"
   )
 ```
-# Nitrogen Content
+## Nitrogen Content
 Analysis of relationship between number of eggs found on plants and host plant nitrogen content.
 ```{r}
 # Box plot
@@ -133,7 +133,7 @@ egg_laying %>%
     y = "Count"
   )
 ```
-# Leaf Size
+## Leaf Size
 Analysis of relationship between number of eggs found on plants and average host plant leaf size.
 ```{r}
 # Box Plot
@@ -175,9 +175,10 @@ egg_laying %>%
     y = "Count"
   )
 ```
-# Vegetation around Plant
+## Vegetation around Plant
 Analysis of relationship between number of eggs found on plants and vegetation surrounding host plant in a 50 cm x 50 cm area.
 ```{r}
+# Box Plot
 egg_laying %>%
   select(veg, n_eggs) %>% 
   mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
@@ -192,6 +193,7 @@ egg_laying %>%
     x = "Any Eggs?",
     y = "% Vegetation within 50 cm^2"
     )
+# Line Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = veg, y = n_eggs, color = season)) +
@@ -204,9 +206,10 @@ egg_laying %>%
     y = "Amount of Eggs"
   )
 ```
-# Bare Ground
+## Bare Ground
 Analysis of relationship between number of eggs found on plants and bare ground surrounding host plant in a 50 cm x 50 cm area.
 ```{r}
+# Box Plot
 egg_laying %>%
   select(bare_ground, n_eggs) %>% 
   mutate(lay_eggs = if_else(n_eggs > 0, "Yes", "No")) %>%
@@ -221,6 +224,7 @@ egg_laying %>%
     x = "Any Eggs?",
     y = "% Bare Ground within 50 cm^2"
     )
+# Line Plot
 egg_laying %>%
   filter(n_eggs != 0) %>%
   ggplot(aes(x = bare_ground, y = n_eggs, color = season)) +
